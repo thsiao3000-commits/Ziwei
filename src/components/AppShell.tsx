@@ -1,4 +1,6 @@
 import { NavLink, Outlet } from 'react-router';
+import { APP_VERSION } from '../lib/version';
+import { UpdateBanner } from './UpdateBanner';
 
 const NAV = [
   { to: '/', label: '排盤', end: true },
@@ -23,10 +25,15 @@ export function AppShell() {
       </a>
 
       <header className="border-b border-line">
-        <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-4 py-3 md:px-8">
-          <NavLink to="/" className="font-kai text-[1.5rem] font-bold leading-none text-ink">
-            紫微命盤
-          </NavLink>
+        <div className="flex w-full max-w-[1800px] items-center gap-x-10 px-4 py-3 md:px-5">
+          <div className="flex items-baseline gap-2">
+            <NavLink to="/" className="font-kai text-[1.5rem] font-bold leading-none text-ink">
+              紫微命盤
+            </NavLink>
+            <span className="text-sm leading-none text-ink-muted" data-testid="app-version">
+              {APP_VERSION}
+            </span>
+          </div>
           <nav aria-label="主要導覽" className="hidden gap-1 md:flex">
             {NAV.map((item) => (
               <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
@@ -37,14 +44,17 @@ export function AppShell() {
         </div>
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 md:px-8 md:py-10">
+      <UpdateBanner />
+
+      <main id="main" className="w-full max-w-[1800px] flex-1 px-4 py-6 md:px-5 md:py-8">
         <Outlet />
       </main>
 
-      <footer className="mx-auto w-full max-w-[1200px] px-4 pb-24 pt-6 text-sm text-ink-muted md:px-8 md:pb-8">
+      <footer className="w-full max-w-[1800px] px-4 pb-24 pt-6 text-sm text-ink-muted md:px-5 md:pb-8">
         <p className="max-w-[34em]">
           紫微斗數解讀僅供自我了解與參考，不能取代醫療、法律或財務專業意見。
         </p>
+        <p className="mt-1">紫微命盤 {APP_VERSION}</p>
       </footer>
 
       {/* 手機用底部導覽列 */}

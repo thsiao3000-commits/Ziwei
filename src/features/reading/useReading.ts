@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { computeHoroscope } from '../chart/engine';
 import type { ChartData, SavedChart } from '../chart/types';
+import { useBusy } from '../../lib/busy';
 import { getProvider } from '../../lib/llm';
 import type { ProviderId } from '../../lib/llm/types';
 import { getKey } from '../settings/keys';
@@ -84,6 +85,13 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
       abort.current?.abort();
     };
   }, [saved.id]);
+
+  // 讓更新提示知道 AI 是否正在回覆，避免在回覆途中重新載入。
+  const streaming = pending !== null;
+  useEffect(() => {
+    useBusy.getState().setStreaming(streaming);
+    return () => useBusy.getState().setStreaming(false);
+  }, [streaming]);
 
   const current = conversations?.find((item) => item.id === currentId) ?? null;
 

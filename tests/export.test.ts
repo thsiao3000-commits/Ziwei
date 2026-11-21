@@ -62,8 +62,9 @@ describe('匯出解讀（Markdown）', () => {
     expect(markdown).toContain('寫到一半\n\n_這則回覆沒有寫完（連線中斷）。_\n\n_這則回覆以錯誤結束：瀏覽器連不上 OpenAI。_\n\n_OpenAI　gpt-6.2-sol_');
   });
 
-  it('結尾有免責說明', () => {
-    expect(markdown.trimEnd().endsWith('不能取代醫療、法律或財務專業意見。')).toBe(true);
+  it('結尾有免責說明與工具版本', () => {
+    expect(markdown).toContain('不能取代醫療、法律或財務專業意見。');
+    expect(markdown.trimEnd()).toMatch(/工具：紫微命盤 v\d+\.\d+\.\d+$/);
   });
 
   it('不放稱呼與出生資料時，只留性別、五行局、命主與身主', () => {

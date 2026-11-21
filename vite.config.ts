@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
@@ -24,6 +25,23 @@ const CSP = [
   "base-uri 'self'",
   "form-action 'self'",
 ].join('; ');
+
+/** 版本號的唯一來源是 package.json 的 version；畫面、匯出檔與新版偵測都用它。 */
+const APP_VERSION = `v${(JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }).version}`;
+
+/**
+ * 建置時輸出 version.json。已開著的分頁會不走快取抓它，發現線上版本比較新就提示更新
+ *（瀏覽器，尤其手機上久開的分頁，可能一直顯示快取的舊頁面）。
+ */
+function versionFile(): Plugin {
+  return {
+    name: 'ziwei:version-file',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: `${JSON.stringify({ version: APP_VERSION })}\n` });
+    },
+  };
+}
 
 function cspMeta(): Plugin {
   return {
@@ -61,7 +79,8 @@ function woff2Only(): Plugin {
 
 export default defineConfig({
   base: BASE,
-  plugins: [woff2Only(), react(), tailwindcss(), cspMeta()],
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
+  plugins: [woff2Only(), react(), tailwindcss(), cspMeta(), versionFile()],
   build: {
     // 行內 data: 資源會被 CSP 的 font-src / img-src 'self' 擋下，一律輸出成檔案。
     assetsInlineLimit: 0,

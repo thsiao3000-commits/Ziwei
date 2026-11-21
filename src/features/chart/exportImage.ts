@@ -1,3 +1,4 @@
+import { APP_VERSION } from '../../lib/version';
 import type { Density } from '../settings/preferences';
 import { formatSolarDate, GRID_POSITIONS } from './layout';
 import { activeLayers, limitMarks, type ActiveLayer, type Overlay } from './overlay';
@@ -302,7 +303,7 @@ function drawCentre(ctx: CanvasRenderingContext2D, options: ExportOptions, palet
   }
   ctx.font = font(400, 20);
   ctx.fillStyle = palette.muted;
-  ctx.fillText(`紫微命盤　排盤 iztro ${chart.iztroVersion}`, left, MARGIN + CELL * 3 - 28);
+  ctx.fillText(`紫微命盤 ${APP_VERSION}　排盤 iztro ${chart.iztroVersion}`, left, MARGIN + CELL * 3 - 28);
 }
 
 function drawChart(ctx: CanvasRenderingContext2D, options: ExportOptions, palette: Palette) {
@@ -371,7 +372,7 @@ function allText(options: ExportOptions): string {
   for (const layer of activeLayers(options.overlay)) {
     parts.push(layer.short, ...layer.limit.palaceNames, ...layer.limit.stars.flat());
   }
-  return `${[...new Set(parts.join(''))].join('')}男女命國曆農年月日借對宮身主限祿權科忌排盤紫微無星0123456789–・`;
+  return `${[...new Set(parts.join(''))].join('')}男女命國曆農年月日借對宮身主限祿權科忌排盤紫微無星0123456789–・v.`;
 }
 
 async function loadFonts(text: string): Promise<void> {

@@ -6,6 +6,7 @@ import { RouterProvider } from 'react-router/dom';
 import './styles/index.css';
 
 import { AppShell } from './components/AppShell';
+import { retryAfterReload } from './components/UpdateBanner';
 import { applyTheme, useSettings } from './features/settings/store';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
@@ -34,11 +35,14 @@ useSettings.subscribe((state) => applyTheme(state.theme));
 const root = document.getElementById('root');
 if (!root) throw new Error('找不到 #root');
 
-// 字型的 CSS 延後載入，不擋第一次繪製。
-void import('./fonts');
+// 剛按過「立即更新」但載到的還是舊版時，會換成帶版本參數的網址重載，這次就不必畫了。
+if (!retryAfterReload()) {
+  // 字型的 CSS 延後載入，不擋第一次繪製。
+  void import('./fonts');
 
-createRoot(root).render(
-  <StrictMode>
-    <RouterProvider router={router} />
-  </StrictMode>,
-);
+  createRoot(root).render(
+    <StrictMode>
+      <RouterProvider router={router} />
+    </StrictMode>,
+  );
+}

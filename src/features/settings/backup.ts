@@ -1,5 +1,6 @@
 import { computeChart } from '../chart/engine';
 import { getDB } from '../../lib/storage/db';
+import { APP_VERSION } from '../../lib/version';
 import type { SavedChart } from '../chart/types';
 import type { Conversation } from '../reading/types';
 import { usePreferences, type Density } from './preferences';
@@ -11,6 +12,8 @@ import { DEFAULT_SETTINGS, pickSettings, useSettings, type SettingsData } from '
 export type Backup = {
   app: 'ziwei';
   version: 1;
+  /** 匯出時的網站版本，例如 v1.0.0 */
+  appVersion?: string;
   exportedAt: string;
   settings: Omit<SettingsData, 'keyStatus'>;
   preferences: { density: Density | null };
@@ -25,6 +28,7 @@ export async function createBackup(): Promise<Backup> {
   return {
     app: 'ziwei',
     version: 1,
+    appVersion: APP_VERSION,
     exportedAt: new Date().toISOString(),
     settings,
     preferences: { density: usePreferences.getState().density },

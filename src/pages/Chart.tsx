@@ -224,7 +224,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
     );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-10">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-10 2xl:grid-cols-[minmax(0,820px)_minmax(0,1fr)]">
       <section aria-labelledby="chart-title" className="min-w-0">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <h1 id="chart-title" className="text-[1.5rem] md:text-[2rem]">
@@ -237,7 +237,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
             不確定出生時辰？比較相鄰時辰的命盤
           </Link>
         </p>
-        <div className="mx-auto w-full max-w-[720px]">
+        <div className="w-full max-w-[820px]">
           <ChartBoard
             chart={chart}
             density={density}

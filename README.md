@@ -1,5 +1,7 @@
 # 紫微命盤
 
+版本：v1.0.0（變更紀錄見 `CHANGELOG.md`）
+
 紫微斗數排盤與 AI 解讀網站。純前端靜態網站，沒有後端；出生資料、命盤、對話與 API 金鑰只存在使用者的瀏覽器。
 
 - 網址：https://thsiao3000-commits.github.io/Ziwei/

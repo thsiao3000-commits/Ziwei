@@ -33,7 +33,7 @@ export function Home() {
   }
 
   return (
-    <div className="grid gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-12">
+    <div className="grid gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-12 xl:grid-cols-[minmax(0,30rem)_minmax(0,720px)]">
       <section aria-labelledby="home-title">
         <h1 id="home-title" className="text-[1.75rem] md:text-[2.25rem]">
           排出命盤
@@ -52,7 +52,7 @@ export function Home() {
         </p>
       </section>
 
-      <section aria-labelledby="demo-title" className="mx-auto w-full max-w-[620px]">
+      <section aria-labelledby="demo-title" className="w-full max-w-[720px]">
         <h2 id="demo-title" className="text-[1.125rem]">
           示範命盤
         </h2>

@@ -1,6 +1,7 @@
 import { formatSolarDate } from '../chart/layout';
 import type { ChartData } from '../chart/types';
 import { PROVIDER_NAMES } from '../../lib/llm/types';
+import { APP_VERSION } from '../../lib/version';
 import { parseReply } from './followups';
 import type { Conversation } from './types';
 
@@ -61,6 +62,6 @@ export function conversationToMarkdown({ conversation, chart, name, anonymous, e
     lines.push(`_${PROVIDER_NAMES[message.provider]}　${message.model}_`, '');
   }
 
-  lines.push('---', '', '紫微斗數解讀僅供自我了解與參考，不能取代醫療、法律或財務專業意見。', '');
+  lines.push('---', '', '紫微斗數解讀僅供自我了解與參考，不能取代醫療、法律或財務專業意見。', '', `工具：紫微命盤 ${APP_VERSION}`, '');
   return lines.join('\n');
 }
