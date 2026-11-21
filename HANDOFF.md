@@ -1,6 +1,8 @@
 # 紫微斗數網站：Claude Code 交接包
 
-版本 v0.3｜2026-11-21｜網站暫名「紫微命盤」
+版本 v0.4｜2026-11-21｜網站暫名「紫微命盤」
+
+v0.4 變更：M0–M5 實作完成後回填。記錄實作中確認的事實與業主的決定：四柱干支一律送給模型（第 4.2、6.1 節）；排盤預設值對齊 iztro 官方線上排盤，運限分界用立春（第 4.3、7.5 節）；LLM 用官方 SDK，Anthropic 的 API 版本與金鑰標頭以 SDK 為準（第 5.2、7.1 節）；新增 `refusal` 錯誤碼（第 7.4 節）；補上業主的實際提問如何對應到功能（第 2 節）。文中「已查證」的日期仍是 2026-11-21。
 
 v0.3 變更：業主指定部署在 **GitHub Pages**，並以他現有的網站 https://thsiao3000-commits.github.io/Stock/ 為參考（第 7.8 節）。框架因此改為 Vite 純前端 SPA 與 hash 路由；兩站同網域，新增儲存隔離規定（第 7.8、9 節）；新增解讀視角（第 6.6 節）與花費統計。
 
@@ -49,7 +51,7 @@ v0.2 變更：業主確認網站公開、所有輸入資料（出生資料、API
 
 ## 2. 使用者需求（Customer Requests）
 
-> **本節為暫定內容。** 業主希望以他過去在 Claude 聊天裡問過的紫微斗數問題當作需求來源，但撰寫本文件時讀不到那些對話。下表是依「一般人拿命盤問 AI 時最常問的問題」整理的草稿。業主補上實際提問後，請以實際提問為準更新本節與第 6 節的快捷提問。
+> 下表是依「一般人拿命盤問 AI 時最常問的問題」整理的需求。業主的實際提問列在表格之後，並說明它們如何對應到功能。
 
 | 編號 | 使用者會這樣問 | 轉成產品需求 | 優先 |
 |---|---|---|---|
@@ -71,13 +73,24 @@ v0.2 變更：業主確認網站公開、所有輸入資料（出生資料、API
 | CR-16 | 「把結果存下來／傳給朋友」 | 匯出命盤圖（PNG）與解讀（Markdown） | P2 |
 | CR-17 | 「我已經有命盤截圖，幫我解讀」 | 圖片辨識匯入 | 之後再議 |
 
-**實際提問（待業主補上）**
+**實際提問（業主提供）**
 
 ```
 1.根據以上男命的八字以及上傳的圖片裡的紫微命盤以及其中的飛星四化詳細分析以上男命的特質. 桃花運如何？
 2.男命的另一半容易有哪些特質？會是幽默，溫柔，有責任感的人嗎？
 3.男命在2030戊辰大運庚戌年從八字紫微（包括流年大限四化以及祿存天馬等雜耀）飛星來看會遇到什麼樣的人？會有以上特質嗎
 ```
+
+這三則提問對應到的功能：
+
+| 提問裡的需求 | 本站的做法 |
+|---|---|
+| 飛星四化 | 命盤內容列出每一宮的宮干飛化與自化；解讀視角可選「飛星四化派」（第 6.6 節） |
+| 桃花運、另一半的特質 | 快捷提問「桃花與另一半」（第 6.3 節） |
+| 指定年份的大限、流年四化 | 提問文字裡寫到西元年份，就自動附上該年的大限與流年；也可以在盤上選大限、流年、流月後提問（第 6.5 節） |
+| 祿存、天馬等雜曜 | 命盤內容含本命的輔星與雜曜，以及運曜、流曜（運祿、流馬等） |
+| 八字 | 四柱干支一律附上。**v1 沒有排八字**（十神、八字大運），提示詞會請模型說明這一點；「戊辰大運」這類八字大運不在資料裡 |
+| 上傳命盤圖片 | 不需要：命盤由本站排出。圖片辨識匯入仍是「之後再議」（CR-17） |
 
 ---
 
@@ -92,7 +105,7 @@ v0.2 變更：業主確認網站公開、所有輸入資料（出生資料、API
 - **稱呼**（選填，預設「我」）
 - **性別**：男／女
 - **曆法**：國曆／農曆。選農曆時出現「閏月」選項，只有該年該月確實是閏月才可勾選
-- **出生日期**：年、月、日分開輸入或下拉。不要只給原生日期選擇器，選幾十年前的年份很難用。可輸入範圍以排盤函式庫支援範圍為準（待查證）
+- **出生日期**：年、月、日分開輸入或下拉。不要只給原生日期選擇器，選幾十年前的年份很難用。可輸入範圍：1900–2100。iztro 文件沒有載明支援範圍（1850–2150 實測不報錯，但沒有驗證正確性），所以先保守限制
 - **出生時間**：可輸入時鐘時間（HH:mm）或直接選時辰，兩者同步；即時顯示對應時辰，例如「寅時 03:00–05:00」。23:00–01:00 要明確區分早子時與晚子時，並用一句話說明差別
 - **進階（預設收合）**：出生地經度做真太陽時校正（P2）
 - 送出按鈕文字：「排出命盤」
@@ -160,7 +173,7 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 - **測試連線**：用該金鑰呼叫模型列表端點。成功顯示「連線成功，可用模型 N 個」，失敗顯示具體原因（第 7.4 節錯誤對照）
 - **狀態標記**：未設定／已設定未驗證／已驗證／驗證失敗
 - **清除金鑰**：立即從瀏覽器儲存移除
-- **取得金鑰的連結**：連到各家官方 API 主控台的金鑰頁（網址待查證）
+- **取得金鑰的連結**：連到各家官方 API 主控台的金鑰頁（已查證可開啟）：`https://platform.openai.com/api-keys`、`https://platform.claude.com/settings/keys`
 - 區塊下方固定說明：「金鑰只存在這台裝置的瀏覽器，本站沒有伺服器會收到它。提問時，你的瀏覽器會把金鑰直接送給 OpenAI 或 Anthropic。」
 
 **記住金鑰的方式**（單選）：
@@ -176,14 +189,19 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 - **重新整理模型列表**按鈕
 - **推理深度**（進階）：預設（不送參數）／低／中／高。用語與參考網站一致
 - **回覆詳細度**：精簡／標準／詳盡（只影響提示詞，不影響 API 參數）
-- **提問時附上出生年月日**：預設關閉。關閉時只送命盤內容，不送稱呼與出生年月日（第 6.1 節）
+- **提問時附上出生年月日**：預設關閉。關閉時只送命盤內容（含四柱干支），不送稱呼、國曆與農曆生日、時辰（第 6.1 節）。介面要說明四柱一律會送出，而它可以反推出生日期
 
 ### 4.3 排盤
 
-- 解讀取向：三合為主（預設）／飛星四化為主
-- 年分界：以排盤函式庫選項為準（待查證選項名稱與預設值）
-- 晚子時處理、演算法（預設／中州派）：同上
-- 預設顯示密度
+- 解讀取向：三合為主（預設）／飛星四化為主；另有「自訂視角」文字欄（第 6.6 節）
+- 年分界（`yearDivide`）：正月初一（預設）／立春
+- 運限分界（`horoscopeDivide`）：正月初一／立春（預設）。它也決定四柱月柱與依年支安的雜曜
+- 小限分界（`ageDivide`）：過年（預設）／生日
+- 晚子時（`dayDivide`）：算來日（預設）／算當日
+- 安星法（`algorithm`）：通行版本（預設）／中州派
+- 預設顯示密度：自動（手機精簡、電腦標準）／精簡／標準／完整
+
+以上預設值與 iztro 官方線上排盤（ziwei.pub）一致（已查證，見第 7.5 節）。排盤選項用在之後新排的命盤；已排好的命盤保留當時的設定快照，命盤頁可「改用目前的設定重排」。
 
 每個選項旁要有一句白話說明「這會改變什麼」。
 
@@ -215,7 +233,7 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 | GPT-6.1 Terra | `gpt-6.1-terra` | 快速、省 | $1／$5 |
 | GPT-6 Luna | `gpt-6-luna` | 最省 | $0.10／$0.50 |
 
-- GPT-6.2 Astra 與 Sol 於 2026-11-17 推出
+- GPT-6.2 Astra 與 Sol 於 2026-11-17 推出（官方模型頁沒有列推出日期，這一點未能查證）
 - 推理強度可選值：`low`、`medium`、`high`、`xhigh`、`max`；Terra 與 Luna 另可用 `none`。**Astra 與 Sol 會拒絕 `none`**
 
 **Anthropic（Claude）**（Messages API）
@@ -234,8 +252,8 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 
 ### 5.2 動態列表
 
-- **Anthropic**（已查證）：`GET https://api.anthropic.com/v1/models?lifecycle=active&limit=100`，標頭 `x-api-key`、`anthropic-version: 2023-06-01`，從瀏覽器呼叫時另需 `anthropic-dangerous-direct-browser-access: true`。回傳含 `id`、`display_name`、`created_at`、`lifecycle`、`line`（`haiku`／`sonnet`／`opus`／`fable`／`mythos`）、`max_input_tokens`、`max_tokens`、`capabilities`。用 `line` 分組，不要解析 ID 字串
-- **OpenAI**（待查證）：`GET https://api.openai.com/v1/models`。這個帳號可能回傳上百個模型（含影像、語音、embedding、moderation），需要過濾：只留 `gpt-` 開頭的文字模型，排除 image、audio、realtime、embedding、moderation、tts、transcribe 等字樣。過濾規則集中寫在一個函式並寫測試
+- **Anthropic**（已查證）：`GET https://api.anthropic.com/v1/models?lifecycle=active&limit=100`（`limit` 預設 20、上限 1000）。標頭由官方 SDK 送出：API 版本是 `anthropic-version: 2026-10-21`，金鑰用 `Authorization: Bearer`（`x-api-key` 也被接受），開啟 `dangerouslyAllowBrowser` 後自動帶 `anthropic-dangerous-direct-browser-access: true`。回傳含 `id`、`display_name`、`created_at`、`lifecycle`、`line`（`haiku`／`sonnet`／`opus`／`fable`／`mythos`）、`max_input_tokens`、`max_tokens`、`capabilities`。用 `line` 分組，不要解析 ID 字串
+- **OpenAI**（已查證）：`GET https://api.openai.com/v1/models`，回傳只有 `id`、`created`、`owned_by`，沒有能力欄位。這個帳號可能回傳上百個模型（含影像、語音、embedding、moderation），需要過濾：只留 `gpt-` 開頭的文字模型，排除 image、audio、realtime、embedding、moderation、tts、transcribe 等字樣。過濾規則集中寫在一個函式並寫測試
 - 列表快取在記憶體，設定頁可手動重新整理
 - 排序：推薦清單在前，其餘依建立時間新到舊
 
@@ -244,10 +262,12 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 不同模型接受的參數不同，原則是**少送參數、失敗要能退回**：
 
 - 預設不送任何思考／推理參數，使用供應商預設值
-- 使用者在設定選了推理深度才送，且只送該模型支援的值（Anthropic 看 Models API 的 `capabilities`；OpenAI 看推薦清單設定）。確切參數名稱與結構待查證，見第 13 節的 effort 文件
+- 使用者在設定選了推理深度才送（已查證的參數：Anthropic 是 `output_config.effort`，OpenAI 是 `reasoning.effort`）。Anthropic 可從 Models API 的 `capabilities.effort` 知道支援哪些值；OpenAI 沒有能力資訊，照送、被拒再移除
 - 不送 `temperature`、`top_p` 等取樣參數
 - 收到 400 且訊息指向不支援的參數時：移除該參數重試一次，並提示使用者
-- Anthropic 的 `max_tokens` 要替思考留空間，數值依官方文件設定（待查證）
+- Anthropic 的 `max_tokens` 要替思考留空間（思考的 token 也算在裡面）。本站設 32000：遠超過解盤回覆的長度，又低於所有現行模型的上限，舊模型與自訂模型也能用
+- 不送 `thinking` 參數：Fable 5.2、Opus 5.5、Sonnet 5.5 都會拒絕 `disabled`
+- OpenAI 請求帶 `store: false`，不請 OpenAI 保存回覆
 
 ---
 
@@ -257,20 +277,27 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 
 寫一個純函式 `serializeChart(astrolabe, horoscope, options): string`，把排盤結果轉成精簡、穩定的文字，放進系統提示詞。必須有單元測試（快照）。
 
-**只送解讀需要的內容。** 預設不送稱呼，也不送國曆或農曆的出生年月日時；模型需要的是命盤本身（宮位、星曜、四化、運限）。使用者在設定開啟「提問時附上出生年月日」才加上。第一次提問前，用一句話告知會送出哪些內容、送給誰。
+**只送解讀需要的內容。** 預設不送稱呼，也不送國曆或農曆的出生年月日與時辰；模型需要的是命盤本身（宮位、星曜、四化、運限）。使用者在設定開啟「提問時附上出生年月日」才加上。輸入框下方固定用一句話說明會送出哪些內容、送給誰。
+
+**四柱干支一律送出**（業主決定，v0.4）：業主的提問會用到八字。四柱可以反推出生日期，所以設定頁與送出說明都要寫明「含四柱干支」。
 
 格式範例（內容僅示意，實際值由程式產生）：
 
 ```
-【命主】女｜五行局 …｜命主 …｜身主 …
-【設定】取向：三合｜年分界：…｜函式庫：iztro x.y.z
+【命主】女｜五行局 …｜命主 …｜身主 …｜命宮在…｜身宮在…
+【四柱】年柱 月柱 日柱 時柱
+【出生】（開啟「附上出生年月日」才有）稱呼｜國曆｜農曆｜時辰
+【設定】取向：三合｜年分界：…｜運限分界：…｜晚子時：…｜安星：…｜函式庫：iztro x.y.z
 【本命十二宮】
-命宮（宮干支）｜主星：星名(亮度)[四化]…｜輔星：…｜雜曜：…｜大限 4–13｜身宮：否
-兄弟宮 …
-（十二宮依序列完；空宮寫「主星：無（對宮：…）」）
+命宮（宮干支）｜主星：星名(亮度)[四化]…｜輔星：…｜雜曜：…｜長生、博士｜大限 4–13｜宮干飛化：祿→某宮 權→某宮(自化) …
+兄弟 …
+（十二宮依命宮起的順序列完；空宮寫「主星：無（空宮，對宮某宮：…）」）
 【生年四化】祿：…（在某宮）｜權：…｜科：…｜忌：…
-【三方四正】命宮：命、財帛、官祿、遷移（其餘宮位同理，只列被問到的宮位以省 token）
-【目前運限】基準日 2026-11-21｜大限：某宮（34–43 歲），四化 …｜流年：干支，流年命宮在某宮，四化 …
+【三方四正】命宮：命宮、遷移、財帛、官祿（其餘宮位在提問時以補充資料附上）
+【大限一覽】3–12 歲 命宮(壬午)｜13–22 歲 …
+【目前運限】基準日 2026-11-21｜虛歲 …
+大限：某宮（34–43 歲）｜干支｜命宮落在本命某宮｜四化 …｜運曜 …
+流年：干支｜命宮落在本命某宮｜四化 …｜流曜 …
 ```
 
 ### 6.2 系統提示詞（草稿）
@@ -304,8 +331,10 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 - 事業：官祿宮、命宮、財帛宮、遷移宮
 - 財運：財帛宮、福德宮、田宅宮
 - 感情：夫妻宮、福德宮、命宮
+- 桃花與另一半：夫妻宮、福德宮、命宮、遷移宮（依業主的實際提問新增）
 - 健康留意：疾厄宮、命宮、福德宮
 - 目前大限、今年流年：帶入第 6.1 節的運限區塊
+- 提問文字裡寫到西元年份（出生年之後、2100 年以前）時，自動附上該年的大限與流年
 
 模板集中放在一個檔案，方便業主日後依自己的提問習慣增修。
 
@@ -322,7 +351,7 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 - **多輪對話**：每次請求送出系統提示詞（含命盤資料）加上這段對話的完整訊息紀錄，模型才記得前文
 - **建議追問**：每則回覆結束後顯示 2–3 個可點的追問。來源是系統提示詞要求模型在結尾附上的 `<followups>` 區塊（第 6.2 節）；前端解析後把該區塊從正文移除。串流過程中不要讓這個區塊閃現在畫面上。解析失敗就不顯示，不影響正文
 - **追問這段**：選取回覆中的一段文字，出現「追問這段」，點下後把該段以引用形式帶進輸入框
-- **追問時換宮位或運限**：對話中切換選中的宮位或運限時，下一則訊息附上更新後的相關資料（第 6.1 節的三方四正與運限區塊），並在訊息上方標示「已帶入：某宮」
+- **追問時換宮位或運限**：對話中切換選中的宮位或運限時，下一則訊息附上更新後的相關資料（第 6.1 節的三方四正與運限區塊），並在訊息上方標示「已帶入：某宮」。輸入框上方也先顯示「下一則提問會帶入：…」
 - **換模型追問**：同一段對話中可切換模型，之後的訊息用新模型，每則回覆標示所用模型
 - **對話太長**：訊息超過約 20 則時提示「對話已經很長，開新對話會更省」。不自動刪除舊訊息
 - **費用提醒**：追問會重送整段對話，越長越貴。第一次追問時用一句話說明
@@ -347,13 +376,13 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 
 | 項目 | 選擇 | 備註 |
 |---|---|---|
-| 框架 | Vite ＋ React ＋ TypeScript strict（純前端 SPA） | 沒有任何伺服器端程式。選 Vite 而非 Next.js：GitHub Pages 只能放靜態檔，且 SPA 不產生行內腳本，CSP 可以設到最嚴。用當下最新穩定版，以 `npm view` 查證 |
-| 路由 | hash 路由（React Router 或同級方案） | GitHub Pages 沒有 SPA 回退，hash 路由重新整理不會 404；`#` 之後的內容也不會送到伺服器 |
+| 框架 | Vite ＋ React ＋ TypeScript strict（純前端 SPA） | 沒有任何伺服器端程式。選 Vite 而非 Next.js：GitHub Pages 只能放靜態檔，且 SPA 不產生行內腳本，CSP 可以設到最嚴。實際版本：Vite 8、React 19、Tailwind 4。TypeScript 釘在 6.0.x，因為 `typescript-eslint` 尚未支援 7 |
+| 路由 | hash 路由（`react-router` 8；`react-router-dom` 已停在 7.x，不再使用） | GitHub Pages 沒有 SPA 回退，hash 路由重新整理不會 404；`#` 之後的內容也不會送到伺服器 |
 | 樣式 | Tailwind CSS ＋ CSS 變數做 design tokens | 元件用 Radix／shadcn 當無樣式基底，外觀全部自訂 |
 | 排盤 | `iztro`（MIT） | 純前端計算。已查證：文件站顯示目前版本 v2.6.5 |
 | 命盤元件 | 自製 | `react-iztro` 只當行為參考，不直接使用其樣式 |
 | 狀態 | Zustand（含 persist） | 設定存 localStorage；命盤與對話存 IndexedDB |
-| LLM | 瀏覽器直連供應商 API | 優先用官方 SDK 的瀏覽器模式（待查證是否可行、打包體積是否合理）；不行就用 `fetch` 自行解析 SSE |
+| LLM | 瀏覽器直連供應商 API | 用官方 SDK 的瀏覽器模式（已查證可行）：`@anthropic-ai/sdk` 與 `openai`，開啟 `dangerouslyAllowBrowser`。每家壓縮後約 82–84 KB，用到時才載入 |
 | 測試 | Vitest ＋ Playwright | |
 | 部署 | **GitHub Pages**（業主指定，見第 7.8 節） | 專案站台，網址為 `https://thsiao3000-commits.github.io/<repo 名稱>/` |
 
@@ -362,7 +391,7 @@ OpenAI 與 Claude（Anthropic）各一個區塊，欄位相同：
 業主要求所有輸入資料留在本機，所以本站不設任何伺服器代理。LLM 請求由瀏覽器直接送到供應商：
 
 - **Anthropic**：支援瀏覽器直連，請求需帶 `anthropic-dangerous-direct-browser-access: true` 標頭
-- **OpenAI**：2026-11-19 有第三方實測，`/v1/responses` 與 `/v1/chat/completions` 目前都接受瀏覽器跨來源請求。但這不是 OpenAI 承諾的用法，開發者社群在 2025 年 10 月與 2026 年 1 月都回報過突然被擋
+- **OpenAI**：2026-11-19 有第三方實測，`/v1/responses` 與 `/v1/chat/completions` 目前都接受瀏覽器跨來源請求；2026-11-21 自行實測，兩家的預檢都回 `access-control-allow-origin: *`，正式網址上直連可達。但這不是 OpenAI 承諾的用法，開發者社群在 2025 年 10 月與 2026 年 1 月都回報過突然被擋
 
 這是「資料留在本機」帶來的已知風險（已告知業主），處理方式：
 
@@ -392,7 +421,10 @@ type ChatRequest = {
 type StreamEvent =
   | { type: 'status'; state: 'thinking' }
   | { type: 'text'; delta: string }
-  | { type: 'done'; usage?: { inputTokens: number; outputTokens: number } }
+  // 不影響結果、但使用者應該知道的事，例如推理深度被拒後已移除重試
+  | { type: 'notice'; message: string }
+  // truncated：回覆到達長度上限而中斷，已收到的文字仍然有效
+  | { type: 'done'; usage?: { inputTokens: number; outputTokens: number }; truncated?: boolean }
   | { type: 'error'; code: ErrorCode; message: string };
 ```
 
@@ -424,6 +456,7 @@ interface LLMProvider {
 | `overloaded` | 5xx／過載 | 供應商忙碌中，稍後再試 |
 | `context_too_long` | 400 | 對話太長，請開新對話 |
 | `blocked` | 請求沒有送達（瀏覽器端無法分辨斷線或被 CORS 擋下） | 瀏覽器連不上供應商。可能是網路問題，或該供應商暫時不接受瀏覽器直連。請檢查網路，或改用另一家供應商 |
+| `refusal` | 模型以安全理由拒答。這是 HTTP 200（Anthropic 的 `stop_reason: "refusal"`、OpenAI 的 `content_filter`），不是錯誤狀態碼 | 模型拒絕回答這個問題，請換個問法或改用另一個模型。業主決定不開啟 Anthropic 的伺服器端自動後備模型 |
 | `unknown` | 其他 | 顯示供應商原始訊息 |
 
 ### 7.5 排盤模組
@@ -447,7 +480,16 @@ astrolabe.horoscope(date, timeIndex);
 - 繁體中文語言代碼是 `zh-TW`
 - 命盤物件欄位：`solarDate`、`lunarDate`、`chineseDate`、`time`、`timeRange`、`sign`、`zodiac`、`earthlyBranchOfSoulPalace`、`earthlyBranchOfBodyPalace`、`soul`、`body`、`fiveElementsClass`、`palaces`
 - 宮位物件欄位：`name`、`isBodyPalace`、`isOriginalPalace`、`heavenlyStem`、`earthlyBranch`、`majorStars`、`minorStars`、`adjectiveStars`、`changsheng12`、`boshi12`、`jiangqian12`、`suiqian12`、`ages` 等
-- 三方四正、飛星、四化判斷的輔助方法，以及流派設定（`astro.config`）的選項名稱與預設值：**待查證**，請看文件的 astrolabe、palace、star 章節與套件的型別定義
+- 三方四正、飛星、四化的輔助方法（已查證）：`astrolabe.surroundedPalaces()`、`palace.mutagedPlaces()`、`palace.selfMutaged()`、`palace.isEmpty()`；運限清單 `decadalList()`、`yearlyList()`、`monthlyList()`
+- 流派設定（已查證）：`yearDivide`、`horoscopeDivide`、`ageDivide`、`dayDivide`、`algorithm`，選項與本站預設見第 4.3 節。用 `astro.withOptions({ ..., config })` 讓設定只作用在該張盤，不動全域的 `astro.config`
+
+實作時發現、必須處理的行為（都有測試）：
+
+- **官方線上排盤的運限分界是立春**（`horoscopeDivide: 'exact'`），而函式庫自己的預設是正月初一。以 10 組命盤逐宮比對後確認；本站預設對齊官方排盤。它影響四柱月柱、歲前與將前十二神、依年支安的雜曜
+- **預設語系是 `zh-CN`**，每次都要傳 `zh-TW`；`zh-TW` 的農曆日期仍有簡體字（腊、闰），本站轉成繁體
+- **晚子時算來日時**，函式庫回報的農曆日期是隔天；本站顯示與核對輸入都用出生當天的農曆日期，和官方排盤一致
+- **不存在的閏月會被默默當成一般月份**，本站自行擋下；農曆小月的三十日會丟出錯誤，本站轉成具體訊息
+- 文件沒有載明支援的年份範圍，表單先限 1900–2100
 
 實作要求：
 
@@ -510,16 +552,16 @@ tests/
 
 業主指定和他現有的網站放在同一個平台。參考網站是 https://thsiao3000-commits.github.io/Stock/ （「我的投資組合 + AI 分析」），它同樣是純前端、資料存瀏覽器、自帶 OpenAI 與 Claude 金鑰。
 
-**開工前**：請業主讓你讀取參考網站的 repo（推測是 `thsiao3000-commits/Stock`，待確認），看它的建置與部署方式、設定頁用語與儲存鍵名。如果它是不需建置的單一 HTML 檔，而業主希望本站也維持那種做法，先回報並確認再動工。撰寫本文件時只讀了公開頁面，沒有讀到原始碼。
+**參考網站的 repo**（已查證）：`thsiao3000-commits/Stock` 是公開的，它是不需建置的單一 `index.html`，由 Pages 直接從 `main` 根目錄發佈；儲存鍵前綴是 `twbt_` 與 `twpf_`。**業主已確認本站維持 Vite 建置**（需要自行託管字型、嚴格 CSP、iztro 與測試），因此部署方式與 Stock 不同，改走 GitHub Actions。
 
 **部署設定**
 
 - 專案站台網址：`https://thsiao3000-commits.github.io/<repo 名稱>/`。repo 名稱待業主決定，預設 `Ziwei`
 - Vite 的 `base` 設為 `/<repo 名稱>/`。所有資源、字型路徑都要在子路徑下正常運作，不寫死以 `/` 開頭的路徑
-- 以 GitHub Actions 建置並發佈到 Pages，推到 `main` 自動部署（官方 Pages 部署動作的名稱與版本待查證）
+- 以 GitHub Actions 建置並發佈到 Pages，推到 `main` 自動部署。動作（已查證）：`actions/configure-pages@v6`、`actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`
 - 加上 `.nojekyll`
 - 使用 hash 路由，重新整理任何頁面都不可 404
-- GitHub Pages 無法自訂回應標頭（待查證）。CSP 用 `index.html` 內的 `<meta http-equiv="Content-Security-Policy">` 下達：`script-src 'self'`、`connect-src 'self' https://api.openai.com https://api.anthropic.com`；樣式因為有行內 style 屬性，可允許 `'unsafe-inline'`，腳本不可
+- GitHub Pages 無法自訂回應標頭（未對照官方文件；`<meta>` 的 CSP 已實測有效）。CSP 用 `index.html` 內的 `<meta http-equiv="Content-Security-Policy">` 下達：`script-src 'self'`、`connect-src 'self' https://api.openai.com https://api.anthropic.com`；樣式因為有行內 style 屬性，可允許 `'unsafe-inline'`，腳本不可
 - M0 就先讓空殼網站上線，確認部署流程通了再往下做
 - repo 是公開的：不得含任何金鑰或真實出生資料，測試資料也一樣
 
@@ -678,7 +720,7 @@ tests/
 
 **排盤正確性（最重要）**
 
-- 至少 5 組出生資料的黃金測試，結果需與業主提供的可信來源命盤逐宮比對（見第 12 節）
+- 至少 5 組出生資料的黃金測試，結果需與可信來源命盤逐宮比對。業主指定以 iztro 官方線上排盤（ziwei.pub）為對照；目前有 10 組虛構生日。官方排盤本身也用 iztro 計算，所以這組測試保證的是本站的包裝與設定沒有走樣，不是獨立驗證演算法
 - 邊界情況：閏月、早子時與晚子時、立春前後出生、農曆年底、跨日
 - `serializeChart` 快照測試
 
@@ -721,21 +763,26 @@ tests/
 
 M3 完成即是可用的第一版。
 
+**狀態（v0.4）**：M0 到 M5 全部完成並已部署。「之後」的項目尚未開始。
+
 ---
 
 ## 12. 待確認事項
 
 | 問題 | 預設 |
 |---|---|
-| 業主過去實際問過的紫微斗數問題 | 用第 2 節草稿；業主補上後更新第 2、6 節 |
+| 業主過去實際問過的紫微斗數問題 | **已提供**：三則提問與對應做法見第 2 節 |
 | 自用還是公開給別人用 | **已確認**：公開。不做帳號、沒有後端，輸入資料只留在使用者本機 |
 | 部署平台 | **已確認**：GitHub Pages，與參考網站同一個帳號 |
-| repo 名稱（決定網址） | `Ziwei`，網址為 `https://thsiao3000-commits.github.io/Ziwei/` |
-| 參考網站 repo 的讀取權限 | 請業主在 Claude Code 中加入該 repo；沒有的話只參考公開頁面 |
+| repo 名稱（決定網址） | **已確認**：`Ziwei`，網址為 `https://thsiao3000-commits.github.io/Ziwei/` |
+| 維持 Vite 建置，或比照參考網站做成單一 HTML | **已確認**：維持 Vite |
+| 四柱干支是否送給模型 | **已確認**：一律送出，介面說明它可以反推出生日期 |
+| 模型拒答時是否自動改用後備模型 | **已確認**：不開啟，只顯示說明 |
+| 參考網站 repo 的讀取權限 | **已解決**：repo 是公開的，已讀原始碼 |
 | 是否替本站綁自訂網域，讓儲存空間與投資組合網站完全隔離 | 先不綁，用鍵名前綴隔離 |
 | 網站名稱與網域 | 暫名「紫微命盤」 |
 | 預設解讀取向 | 三合為主 |
-| 可信來源的對照命盤（驗收用） | 請業主提供 2–5 組出生資料與對應命盤截圖；沒有的話以 iztro 官方線上排盤結果對照 |
+| 可信來源的對照命盤（驗收用） | **已確認**：以 iztro 官方線上排盤（ziwei.pub）對照 |
 | 是否需要台灣日光節約時間提醒 | P2；實作前查證實施年份與起訖日 |
 
 ---
@@ -749,4 +796,5 @@ M3 完成即是可用的第一版。
 - Claude effort 參數：https://platform.claude.com/docs/en/build-with-claude/effort
 - iztro 文件：https://docs.iztro.com （快速開始：https://docs.iztro.com/quick-start ）
 - iztro 原始碼：https://github.com/SylarLong/iztro
+- iztro 官方線上排盤（黃金測試的對照來源）：https://ziwei.pub
 - OpenAI 瀏覽器直連問題討論：https://community.openai.com/t/has-the-cors-policy-changed-responses-api/1372791
