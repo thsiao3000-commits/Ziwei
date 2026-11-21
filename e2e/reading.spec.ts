@@ -133,14 +133,15 @@ test('提問 → 串流文字 → 點建議追問 → 第二則回覆含前一�
   expect(second.messages[1]!.content).not.toContain('followups');
   expect(second.messages[2]!.content).toBe('那事業方面要注意什麼？');
 
-  // 系統提示詞帶命盤，但預設不含稱呼、生日、時辰與四柱。
+  // 系統提示詞帶命盤與四柱，但預設不含稱呼、生日與時辰。
   for (const body of bodies) {
     expect(body.model).toBe('claude-sonnet-5-5');
     expect(body.system).toContain('【本命十二宮】');
     expect(body.system).toContain('命宮（壬午）｜主星：紫微(廟)');
     expect(body.system).toContain('【目前運限】');
     const sent = JSON.stringify(body);
-    for (const secret of ['小明', '2000-8-16', '二〇〇〇', '七月十七', '寅時', '庚辰 甲申 丙午 庚寅', FAKE_KEY]) {
+    expect(body.system).toContain('【四柱】庚辰 甲申 丙午 庚寅');
+    for (const secret of ['小明', '2000-8-16', '二〇〇〇', '七月十七', '寅時', FAKE_KEY]) {
       expect(sent, `請求內文不應包含 ${secret}`).not.toContain(secret);
     }
     for (const key of ['thinking', 'temperature', 'output_config']) expect(body).not.toHaveProperty(key);
@@ -222,7 +223,7 @@ test('供應商回報錯誤：說明原因，可重新產生', async ({ page }) 
   expect(bodies[1]!.messages).toHaveLength(1);
 });
 
-test('開啟「附上出生年月日」後才送出稱呼與四柱', async ({ page }) => {
+test('開啟「附上出生年月日」後才送出稱呼與生日', async ({ page }) => {
   const { bodies } = await setup(page);
   await castChart(page);
   const chartUrl = page.url();
@@ -230,9 +231,9 @@ test('開啟「附上出生年月日」後才送出稱呼與四柱', async ({ pa
   await page.getByRole('checkbox', { name: /提問時附上出生年月日/ }).check();
   await page.goto(chartUrl);
   const reading = panel(page);
-  await expect(reading.getByText('（含稱呼與出生年月日）')).toBeVisible();
+  await expect(reading.getByText('（含四柱、稱呼與出生年月日）')).toBeVisible();
   await reading.getByRole('button', { name: '性格與天賦' }).click();
   await expect(reading.getByText('命宮紫微坐守，格局穩重。')).toBeVisible();
   expect(bodies[0]!.system).toContain('【出生】稱呼 小明');
-  expect(bodies[0]!.system).toContain('四柱 庚辰 甲申 丙午 庚寅');
+  expect(bodies[0]!.system).toContain('國曆 2000-8-16');
 });

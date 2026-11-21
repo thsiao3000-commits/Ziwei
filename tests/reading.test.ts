@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { computeChart, computeHoroscope } from '../src/features/chart/engine';
-import { DEFAULT_CHART_SETTINGS, type BirthInput, type SavedChart } from '../src/features/chart/types';
+import { computeChart, computeHoroscope, computeLimits } from '../src/features/chart/engine';
+import { DEFAULT_CHART_SETTINGS, NO_LIMITS, type BirthInput, type SavedChart } from '../src/features/chart/types';
 import { parseReply } from '../src/features/reading/followups';
 import { buildSystemPrompt, palacePrompt, QUICK_PROMPTS } from '../src/features/reading/prompts';
 import { buildAttachment, mentionedYears, titleFrom, toChatMessages, todayString } from '../src/features/reading/request';
@@ -41,6 +41,46 @@ describe('運限', () => {
   });
 });
 
+describe('疊宮用的運限', () => {
+  it('沒有選擇時只列出十二個大限', () => {
+    const limits = computeLimits(input, DEFAULT_CHART_SETTINGS, NO_LIMITS);
+    expect(limits.decadals).toHaveLength(12);
+    expect(limits.years).toEqual([]);
+    expect(limits.months).toEqual([]);
+    expect(limits.overlay).toEqual({ decadal: null, yearly: null, monthly: null });
+  });
+
+  it('選大限 → 十個流年；選流年 → 流月；各層都有四化與宮名', () => {
+    const limits = computeLimits(input, DEFAULT_CHART_SETTINGS, { decadal: 2, year: 2030, month: 0 });
+    expect(limits.years.map((item) => item.year)).toEqual([2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031]);
+    expect(limits.years[8]).toEqual({ year: 2030, age: 31, stem: '庚', branch: '戌' });
+    expect(limits.months).toHaveLength(12);
+    expect(limits.months[0]?.label).toBe('正月');
+    expect(limits.months[11]?.label).toBe('臘月');
+    expect(`${limits.overlay.decadal?.stem}${limits.overlay.decadal?.branch}`).toBe('庚辰');
+    expect(`${limits.overlay.yearly?.stem}${limits.overlay.yearly?.branch}`).toBe('庚戌');
+    expect(limits.overlay.yearly?.palaceNames).toHaveLength(12);
+    expect(limits.overlay.monthly?.mutagens).toHaveLength(4);
+    // 與用日期算出來的運限一致
+    const byDate = computeHoroscope(input, DEFAULT_CHART_SETTINGS, '2030-7-1');
+    expect(limits.overlay.yearly).toEqual(byDate.yearly);
+    expect(limits.overlay.decadal).toEqual({ ...byDate.decadal, ageRange: undefined });
+  });
+
+  it('閏月的年份分出前半與後半', () => {
+    const limits = computeLimits(input, DEFAULT_CHART_SETTINGS, { decadal: 2, year: 2025, month: null });
+    expect(limits.months.map((item) => item.label)).toContain('閏六月（前半）');
+    expect(limits.months.map((item) => item.label)).toContain('閏六月（後半）');
+  });
+
+  it('超出範圍的選擇會被清掉', () => {
+    const limits = computeLimits(input, DEFAULT_CHART_SETTINGS, { decadal: 2, year: 1999, month: 3 });
+    expect(limits.selection).toEqual({ decadal: 2, year: null, month: null });
+    expect(limits.overlay.yearly).toBeNull();
+    expect(limits.months).toEqual([]);
+  });
+});
+
 describe('命盤序列化', () => {
   const text = serializeChart(chart, horoscope, { school: 'sanhe' });
 
@@ -48,20 +88,19 @@ describe('命盤序列化', () => {
     expect(text).toMatchSnapshot();
   });
 
-  it('預設不含稱呼、生日、時辰與完整四柱', () => {
+  it('預設不含稱呼、生日與時辰；四柱一律送出', () => {
     expect(text).not.toContain('小明');
     expect(text).not.toContain('2000');
     expect(text).not.toContain('二〇〇〇');
     expect(text).not.toContain('七月十七');
     expect(text).not.toContain('寅時');
-    expect(text).not.toContain(chart.fourPillars);
     expect(text).not.toContain('【出生】');
+    expect(text).toContain('【四柱】庚辰 甲申 丙午 庚寅（年柱 月柱 日柱 時柱）');
   });
 
   it('開啟「附上出生年月日」才加上', () => {
     const withBirth = serializeChart(chart, horoscope, { school: 'sanhe', birth: input });
     expect(withBirth).toContain('【出生】稱呼 小明｜國曆 2000-8-16｜農曆 二〇〇〇年七月十七｜寅時');
-    expect(withBirth).toContain('四柱 庚辰 甲申 丙午 庚寅');
   });
 
   it('十二宮依命宮起的順序列完，含星曜亮度、四化與宮干飛化', () => {

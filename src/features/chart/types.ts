@@ -158,6 +158,32 @@ export type HoroscopeData = {
   decadalList: DecadalSummary[];
 };
 
+/** 盤上疊宮顯示用的運限選擇。null 表示那一層沒有選。 */
+export type LimitSelection = {
+  /** 大限序號，0 是第一個大限 */
+  decadal: number | null;
+  /** 流年的西元年，必須落在選定的大限內 */
+  year: number | null;
+  /** 流月在該年流月清單中的序號 */
+  month: number | null;
+};
+
+export const NO_LIMITS: LimitSelection = { decadal: null, year: null, month: null };
+
+export type YearOption = { year: number; age: number; stem: string; branch: string };
+export type MonthOption = { index: number; label: string; stem: string; branch: string };
+
+export type Limits = {
+  decadals: DecadalSummary[];
+  /** 選定大限內的十個流年；沒選大限時為空 */
+  years: YearOption[];
+  /** 選定流年的流月；沒選流年時為空 */
+  months: MonthOption[];
+  overlay: { decadal: LimitInfo | null; yearly: LimitInfo | null; monthly: LimitInfo | null };
+  /** 正規化後的選擇（超出範圍的層會被清掉） */
+  selection: LimitSelection;
+};
+
 export type ChartErrorCode =
   | 'invalid_format'
   | 'out_of_range'

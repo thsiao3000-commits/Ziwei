@@ -4,8 +4,9 @@ import { MUTAGENS, type BirthInput, type ChartData, type HoroscopeData, type Lim
  * 把排盤結果轉成精簡、穩定的文字，放進系統提示詞（HANDOFF 第 6.1 節）。
  * 純函式：同樣的輸入永遠得到同樣的文字，有快照測試。
  *
- * 只送解讀需要的內容。預設不含稱呼、國曆與農曆生日、出生時辰與完整四柱
- *（四柱可以反推出生日期）；使用者開啟「提問時附上出生年月日」才加上。
+ * 只送解讀需要的內容。四柱干支一律送出（業主指定；解讀會用到，但它可以反推出生日期，
+ * 介面上有說明）。稱呼、國曆與農曆生日、出生時辰預設不送；使用者開啟
+ * 「提問時附上出生年月日」才加上。
  */
 export type School = 'sanhe' | 'feixing';
 
@@ -16,7 +17,7 @@ export const SCHOOL_LABEL: Record<School, string> = {
 
 export type SerializeOptions = {
   school: School;
-  /** 有給才會寫出稱呼、生日、時辰與四柱 */
+  /** 有給才會寫出稱呼、生日與時辰 */
   birth?: BirthInput;
 };
 
@@ -109,11 +110,12 @@ export function serializeChart(chart: ChartData, horoscope: HoroscopeData | null
   lines.push(
     `【命主】${gender}｜五行局 ${chart.fiveElementsClass}｜命主 ${chart.soul}｜身主 ${chart.body}｜命宮在${chart.soulBranch}｜身宮在${chart.bodyBranch}`,
   );
+  lines.push(`【四柱】${chart.fourPillars}（年柱 月柱 日柱 時柱）`);
 
   if (options.birth) {
     const calendar = options.birth.calendar === 'solar' ? '國曆' : '農曆';
     lines.push(
-      `【出生】稱呼 ${options.birth.name}｜國曆 ${chart.solarDate}｜農曆 ${chart.lunarDate}｜${chart.time}（${chart.timeRange}）｜四柱 ${chart.fourPillars}｜輸入曆法 ${calendar}`,
+      `【出生】稱呼 ${options.birth.name}｜國曆 ${chart.solarDate}｜農曆 ${chart.lunarDate}｜${chart.time}（${chart.timeRange}）｜輸入曆法 ${calendar}`,
     );
   }
 

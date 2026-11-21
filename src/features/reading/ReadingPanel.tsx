@@ -437,7 +437,7 @@ export function ReadingPanel({ reading, configured, provider, selectedPalaceName
         <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
           <span className="hidden lg:inline">Enter 送出，Shift+Enter 換行。</span>
           送出後，你的提問與命盤內容
-          {settings.includeBirthDate ? '（含稱呼與出生年月日）' : '（不含稱呼與出生年月日）'}
+          {settings.includeBirthDate ? '（含四柱、稱呼與出生年月日）' : '（含四柱干支，不含稱呼與出生年月日）'}
           會由瀏覽器直接送給 {PROVIDER_NAMES[provider]}，並依該供應商的政策處理。
           {hasReply && '追問會重送整段對話，對話越長花費越多。'}
         </p>

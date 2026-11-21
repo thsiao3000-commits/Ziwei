@@ -15,6 +15,8 @@ import {
   type ChartSettings,
   type HoroscopeData,
   type LimitInfo,
+  type Limits,
+  type LimitSelection,
   type Mutagen,
   type PalaceInfo,
   type StarInfo,
@@ -232,7 +234,7 @@ export function computeChart(input: BirthInput, settings: ChartSettings): ChartD
   };
 }
 
-type IztroLimit = ReturnType<Astrolabe['horoscope']>['decadal'];
+type IztroLimit = Pick<ReturnType<Astrolabe['horoscope']>['decadal'], 'heavenlyStem' | 'earthlyBranch' | 'index' | 'palaceNames' | 'mutagen' | 'stars'>;
 
 function findStarPalace(astrolabe: Astrolabe, star: string): number | null {
   for (const palace of astrolabe.palaces) {
@@ -287,5 +289,50 @@ export function computeHoroscope(input: BirthInput, settings: ChartSettings, dat
       ageRange: [item.ageRange[0], item.ageRange[1]],
       yearRange: [item.yearRange[0], item.yearRange[1]],
     })),
+  };
+}
+
+const LUNAR_MONTH_NAMES = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '臘月'];
+
+/**
+ * 盤上疊宮用的運限：依選擇算出大限、流年、流月各層，以及下一層可選的項目。
+ * 不經過日期，直接用 iztro 的大限、流年、流月清單。
+ */
+export function computeLimits(input: BirthInput, settings: ChartSettings, selection: LimitSelection): Limits {
+  computeChart(input, settings);
+  const astrolabe = build(input, settings, input.calendar === 'lunar' && input.isLeapMonth === true);
+  const decadalList = astrolabe.decadalList();
+
+  const decadalItem = selection.decadal === null ? undefined : decadalList[selection.decadal];
+  const yearList = decadalItem && selection.decadal !== null ? astrolabe.yearlyList(selection.decadal) : [];
+  const yearItem = selection.year === null ? undefined : yearList.find((item) => item.year === selection.year);
+  const monthList = yearItem ? astrolabe.monthlyList(yearItem.year) : [];
+  const monthItem = selection.month === null ? undefined : monthList[selection.month];
+
+  return {
+    decadals: decadalList.map((item) => ({
+      palaceIndex: item.index,
+      palaceName: item.palaceName,
+      stem: item.heavenlyStem,
+      branch: item.earthlyBranch,
+      ageRange: [item.ageRange[0], item.ageRange[1]],
+      yearRange: [item.yearRange[0], item.yearRange[1]],
+    })),
+    years: yearList.map((item) => ({ year: item.year, age: item.age, stem: item.heavenlyStem, branch: item.earthlyBranch })),
+    months: monthList.map((item, index) => {
+      const name = LUNAR_MONTH_NAMES[item.month - 1] ?? `${item.month} 月`;
+      const part = item.part === 'first' ? '（前半）' : item.part === 'second' ? '（後半）' : '';
+      return { index, label: `${item.isLeapMonth ? '閏' : ''}${name}${part}`, stem: item.heavenlyStem, branch: item.earthlyBranch };
+    }),
+    overlay: {
+      decadal: decadalItem ? toLimit(astrolabe, decadalItem) : null,
+      yearly: yearItem ? toLimit(astrolabe, yearItem) : null,
+      monthly: monthItem ? toLimit(astrolabe, monthItem) : null,
+    },
+    selection: {
+      decadal: decadalItem ? selection.decadal : null,
+      year: yearItem ? selection.year : null,
+      month: monthItem ? selection.month : null,
+    },
   };
 }
