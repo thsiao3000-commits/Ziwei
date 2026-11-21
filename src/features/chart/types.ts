@@ -124,6 +124,40 @@ export type ChartData = {
   iztroVersion: string;
 };
 
+/** 某一層運限（大限或流年）疊在本命盤上的資料。陣列都以本命宮位索引排列。 */
+export type LimitInfo = {
+  stem: string;
+  branch: string;
+  /** 這層運限的命宮落在哪個本命宮位 */
+  palaceIndex: number;
+  /** 各本命宮位在這層運限裡的宮名 */
+  palaceNames: string[];
+  /** 這層運限的四化：星曜與它所在的本命宮位（找不到時為 null） */
+  mutagens: { mutagen: Mutagen; star: string; palaceIndex: number | null }[];
+  /** 各本命宮位的運曜或流曜 */
+  stars: string[][];
+};
+
+export type DecadalSummary = {
+  palaceIndex: number;
+  palaceName: string;
+  stem: string;
+  branch: string;
+  ageRange: [number, number];
+  yearRange: [number, number];
+};
+
+export type HoroscopeData = {
+  /** 基準日 YYYY-M-D */
+  date: string;
+  /** 虛歲 */
+  nominalAge: number;
+  /** 還沒起運時為 null */
+  decadal: (LimitInfo & { ageRange: [number, number] }) | null;
+  yearly: LimitInfo;
+  decadalList: DecadalSummary[];
+};
+
 export type ChartErrorCode =
   | 'invalid_format'
   | 'out_of_range'

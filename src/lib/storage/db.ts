@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { SavedChart } from '../../features/chart/types';
+import type { Conversation } from '../../features/reading/types';
 import { DB_NAME } from './keys';
 
 /**
@@ -12,10 +13,9 @@ interface ZiweiDB extends DBSchema {
     value: SavedChart;
     indexes: { updatedAt: string };
   };
-  // 對話在 M3 才會寫入，先建好 store，之後不必為了它升版。
   conversations: {
     key: string;
-    value: { id: string; chartId: string };
+    value: Conversation;
     indexes: { chartId: string };
   };
 }

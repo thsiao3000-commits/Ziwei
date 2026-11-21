@@ -13,6 +13,8 @@ import {
   type BirthMutagen,
   type ChartData,
   type ChartSettings,
+  type HoroscopeData,
+  type LimitInfo,
   type Mutagen,
   type PalaceInfo,
   type StarInfo,
@@ -227,5 +229,63 @@ export function computeChart(input: BirthInput, settings: ChartSettings): ChartD
     birthMutagens,
     settings: { ...settings },
     iztroVersion,
+  };
+}
+
+type IztroLimit = ReturnType<Astrolabe['horoscope']>['decadal'];
+
+function findStarPalace(astrolabe: Astrolabe, star: string): number | null {
+  for (const palace of astrolabe.palaces) {
+    if ([...palace.majorStars, ...palace.minorStars].some((item) => item.name === star)) return palace.index;
+  }
+  return null;
+}
+
+function toLimit(astrolabe: Astrolabe, limit: IztroLimit): LimitInfo {
+  return {
+    stem: limit.heavenlyStem,
+    branch: limit.earthlyBranch,
+    palaceIndex: limit.index,
+    palaceNames: [...limit.palaceNames],
+    mutagens: MUTAGENS.map((mutagen, i) => {
+      const star = limit.mutagen[i] ?? '';
+      return { mutagen, star, palaceIndex: star ? findStarPalace(astrolabe, star) : null };
+    }),
+    stars: Array.from({ length: 12 }, (_, i) => (limit.stars?.[i] ?? []).map((star) => star.name)),
+  };
+}
+
+/**
+ * 某個基準日的運限：大限、流年與大限一覽。
+ * date 用 YYYY-M-D 字串。輸入不合法時丟出 ChartInputError（同 computeChart）。
+ */
+export function computeHoroscope(input: BirthInput, settings: ChartSettings, date: string): HoroscopeData {
+  parseDate(date);
+  // 先用 computeChart 做完整的輸入檢核。
+  computeChart(input, settings);
+  const astrolabe = build(input, settings, input.calendar === 'lunar' && input.isLeapMonth === true);
+  const horoscope = astrolabe.horoscope(date);
+
+  const decadalPalace = astrolabe.palaces[horoscope.decadal.index];
+  const nominalAge = horoscope.age.nominalAge;
+  const inDecadal =
+    decadalPalace !== undefined && nominalAge >= decadalPalace.decadal.range[0] && nominalAge <= decadalPalace.decadal.range[1];
+
+  return {
+    date,
+    nominalAge,
+    decadal:
+      inDecadal && decadalPalace
+        ? { ...toLimit(astrolabe, horoscope.decadal), ageRange: [decadalPalace.decadal.range[0], decadalPalace.decadal.range[1]] }
+        : null,
+    yearly: toLimit(astrolabe, horoscope.yearly),
+    decadalList: astrolabe.decadalList().map((item) => ({
+      palaceIndex: item.index,
+      palaceName: item.palaceName,
+      stem: item.heavenlyStem,
+      branch: item.earthlyBranch,
+      ageRange: [item.ageRange[0], item.ageRange[1]],
+      yearRange: [item.yearRange[0], item.yearRange[1]],
+    })),
   };
 }

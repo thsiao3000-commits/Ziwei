@@ -32,6 +32,14 @@ export async function listCharts(): Promise<SavedChart[]> {
   return charts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+/** 刪除命盤與它的所有對話。 */
 export async function deleteChart(id: string): Promise<void> {
-  await (await getDB()).delete('charts', id);
+  const db = await getDB();
+  const keys = await db.getAllKeysFromIndex('conversations', 'chartId', id);
+  const tx = db.transaction(['charts', 'conversations'], 'readwrite');
+  await Promise.all([
+    tx.objectStore('charts').delete(id),
+    ...keys.map((key) => tx.objectStore('conversations').delete(key)),
+    tx.done,
+  ]);
 }
