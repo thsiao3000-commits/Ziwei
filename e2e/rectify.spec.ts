@@ -17,6 +17,12 @@ function sse(text: string): string {
   return events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join('');
 }
 
+/** 開啟時辰對照頁。要算十三張盤，CI 的機器比較慢，多等一下。 */
+async function openRectify(page: Page) {
+  await page.getByRole('link', { name: '不確定出生時辰？比較相鄰時辰的命盤' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '時辰對照' })).toBeVisible({ timeout: 30_000 });
+}
+
 async function castChart(page: Page) {
   await page.goto('./');
   await page.getByLabel('稱呼').fill('小明');
@@ -31,8 +37,7 @@ async function castChart(page: Page) {
 
 test('時辰對照：十三個時辰的重點、相鄰三張盤並排、改用另一個時辰', async ({ page }, testInfo) => {
   await castChart(page);
-  await page.getByRole('link', { name: '不確定出生時辰？比較相鄰時辰的命盤' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: '時辰對照' })).toBeVisible();
+  await openRectify(page);
   await expect(page).toHaveURL(/#\/rectify\/[a-z0-9]{16}$/);
 
   const summary = page.getByRole('table', { name: '十三個時辰的命盤重點' });
@@ -80,7 +85,7 @@ test('時辰對照：十三個時辰的重點、相鄰三張盤並排、改用�
   await expect(page.getByRole('group', { name: '小明的命盤' })).toContainText('寅時');
 
   // 把這張命盤改成丑時
-  await page.getByRole('link', { name: '不確定出生時辰？比較相鄰時辰的命盤' }).click();
+  await openRectify(page);
   await page.getByRole('button', { name: '把這張命盤改成丑時' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '小明的命盤' })).toBeVisible();
   const board = page.getByRole('group', { name: '小明的命盤' });
@@ -100,7 +105,7 @@ test('時辰對照：請 AI 列出分辨時辰的問題', async ({ page }) => {
   });
 
   await castChart(page);
-  await page.getByRole('link', { name: '不確定出生時辰？比較相鄰時辰的命盤' }).click();
+  await openRectify(page);
   await page.getByRole('button', { name: '請 AI 列出分辨這3個時辰的問題' }).click();
 
   await expect(page.getByRole('heading', { level: 1, name: '小明的命盤' })).toBeVisible();
@@ -125,7 +130,7 @@ test('時辰對照：請 AI 列出分辨時辰的問題', async ({ page }) => {
 
 test('時辰對照：沒有金鑰時引導到設定；找不到命盤時說明', async ({ page }) => {
   await castChart(page);
-  await page.getByRole('link', { name: '不確定出生時辰？比較相鄰時辰的命盤' }).click();
+  await openRectify(page);
   await expect(page.getByText('需要先設定 API 金鑰。')).toBeVisible();
   await expect(page.getByRole('button', { name: /請 AI 列出/ })).toHaveCount(0);
 
