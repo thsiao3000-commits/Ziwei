@@ -1,7 +1,8 @@
 import { useId, useMemo, useState, type FormEvent } from 'react';
 import { computeChart, daysInSolarMonth, hasLeapMonth } from './engine';
 import { clockMatchesTimeIndex, clockToTimeIndex, TIME_SLOTS, timeSlotLabel } from './time';
-import { ChartInputError, DEFAULT_CHART_SETTINGS, MAX_YEAR, MIN_YEAR, type BirthInput } from './types';
+import { useSettings } from '../settings/store';
+import { ChartInputError, MAX_YEAR, MIN_YEAR, type BirthInput } from './types';
 
 type Props = {
   /** 輸入通過檢核、可以排盤時呼叫 */
@@ -80,7 +81,7 @@ export function BirthForm({ onSubmit }: Props) {
 
     try {
       // 先排一次確認日期合法（例如農曆小月沒有三十日）。
-      computeChart(input, DEFAULT_CHART_SETTINGS);
+      computeChart(input, useSettings.getState().chartDefaults);
     } catch (cause) {
       setError(cause instanceof ChartInputError ? cause.message : '排盤時發生錯誤，請確認輸入後再試一次。');
       return;

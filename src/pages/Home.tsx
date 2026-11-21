@@ -7,6 +7,7 @@ import { computeChart } from '../features/chart/engine';
 import { saveChart } from '../features/chart/store';
 import { DEFAULT_CHART_SETTINGS, type BirthInput } from '../features/chart/types';
 import { defaultDensity } from '../features/settings/preferences';
+import { useSettings } from '../features/settings/store';
 
 /** 示範命盤用的是 iztro 文件裡的範例生日，不是任何人的真實資料。 */
 const DEMO_INPUT: BirthInput = {
@@ -24,7 +25,7 @@ export function Home() {
   const [density] = useState(defaultDensity);
 
   async function handleSubmit(input: BirthInput) {
-    const saved = await saveChart(input, DEFAULT_CHART_SETTINGS);
+    const saved = await saveChart(input, useSettings.getState().chartDefaults);
     // 出生資料不進網址：只帶本機隨機 id。
     await navigate(`/chart/${saved.id}`, { state: { fresh: true } });
   }

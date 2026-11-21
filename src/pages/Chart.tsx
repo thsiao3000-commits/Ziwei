@@ -1,14 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { CentreInfo } from '../features/chart/CentreInfo';
 import { ChartBoard } from '../features/chart/ChartBoard';
 import { DensityControl } from '../features/chart/DensityControl';
-import { computeChart } from '../features/chart/engine';
+import { computeChart, computeHoroscope, computeLimits } from '../features/chart/engine';
+import { LimitControls } from '../features/chart/LimitControls';
 import { PalaceDetail } from '../features/chart/PalaceDetail';
-import { getChart } from '../features/chart/store';
-import type { ChartData, SavedChart } from '../features/chart/types';
+import { getChart, touchChart, updateChart } from '../features/chart/store';
+import { NO_LIMITS, type ChartData, type ChartSettings, type LimitSelection, type SavedChart } from '../features/chart/types';
 import { palacePrompt } from '../features/reading/prompts';
 import { ReadingPanel } from '../features/reading/ReadingPanel';
+import { todayString } from '../features/reading/request';
+import { serializeLimits, type School } from '../features/reading/serialize';
 import { useReading } from '../features/reading/useReading';
 import { configuredProviders } from '../features/settings/ModelSection';
 import { defaultDensity, usePreferences } from '../features/settings/preferences';
@@ -20,7 +23,7 @@ type Loaded =
   | { status: 'error'; message: string }
   | { status: 'ready'; saved: SavedChart; chart: ChartData };
 
-function useChart(chartId: string | undefined): Loaded {
+function useChart(chartId: string | undefined, version: number): Loaded {
   const [state, setState] = useState<Loaded>({ status: 'loading' });
 
   useEffect(() => {
@@ -33,6 +36,8 @@ function useChart(chartId: string | undefined): Loaded {
         if (!saved) return setState({ status: 'missing' });
         // 只存輸入與設定，每次開啟重新計算。
         setState({ status: 'ready', saved, chart: computeChart(saved.input, saved.chartSettings) });
+        // 記下最後開啟時間，給「我的命盤」排序用。失敗不影響看盤。
+        void touchChart(saved.id).catch(() => undefined);
       } catch {
         if (!cancelled) {
           setState({
@@ -46,7 +51,7 @@ function useChart(chartId: string | undefined): Loaded {
     return () => {
       cancelled = true;
     };
-  }, [chartId]);
+  }, [chartId, version]);
 
   return state;
 }
@@ -67,9 +72,9 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
   );
 }
 
-type ReadyProps = { saved: SavedChart; chart: ChartData; fresh: boolean };
+type ReadyProps = { saved: SavedChart; chart: ChartData; fresh: boolean; onRecast: () => void };
 
-function ChartView({ saved, chart, fresh }: ReadyProps) {
+function ChartView({ saved, chart, fresh, onRecast }: ReadyProps) {
   const [selected, setSelected] = useState<number | null>(null);
   // 桌機側欄的分頁：解讀，或選中宮位的詳情。
   const [tab, setTab] = useState<'reading' | 'detail'>('reading');
@@ -86,7 +91,40 @@ function ChartView({ saved, chart, fresh }: ReadyProps) {
   const provider = defaultProvider && configured.includes(defaultProvider) ? defaultProvider : (configured[0] ?? null);
 
   const [sheetOpen, setSheetOpen] = useState(true);
-  const reading = useReading({ saved, chart, selectedPalace: selected, provider });
+
+  // 運限：大限 → 流年 → 流月，疊在本命盤上。
+  const [limitSelection, setLimitSelection] = useState<LimitSelection>(NO_LIMITS);
+  const limits = useMemo(() => computeLimits(saved.input, saved.chartSettings, limitSelection), [saved, limitSelection]);
+  const limitAttachment = useMemo(() => serializeLimits(chart, limits), [chart, limits]);
+
+  function jumpToToday() {
+    const now = computeHoroscope(saved.input, saved.chartSettings, todayString());
+    const decadal = limits.decadals.findIndex((item) => now.nominalAge >= item.ageRange[0] && now.nominalAge <= item.ageRange[1]);
+    if (decadal === -1) return setLimitSelection(NO_LIMITS);
+    const first = limits.decadals[decadal];
+    const year = first ? first.yearRange[0] + (now.nominalAge - first.ageRange[0]) : null;
+    setLimitSelection({ decadal, year, month: null });
+  }
+
+  // 解讀視角：預設用設定頁的解讀取向，提問時可以另選。
+  const defaultSchool = useSettings((state) => state.school);
+  const [perspective, setPerspective] = useState<School>(defaultSchool);
+
+  // 這張盤排盤當時的設定，和目前設定頁的排盤設定不同時，提供重排。
+  const chartDefaults = useSettings((state) => state.chartDefaults);
+  const outdated = (Object.keys(chartDefaults) as (keyof ChartSettings)[]).some((key) => chartDefaults[key] !== saved.chartSettings[key]);
+  const [recastError, setRecastError] = useState('');
+
+  async function recast() {
+    try {
+      await updateChart(saved.id, { chartSettings: chartDefaults });
+      onRecast();
+    } catch {
+      setRecastError('重排失敗：命盤無法寫回這台裝置。請重新整理後再試。');
+    }
+  }
+
+  const reading = useReading({ saved, chart, selectedPalace: selected, provider, perspective, limits: limitAttachment });
   const palace = selected === null ? undefined : chart.palaces[selected];
 
   function selectPalace(index: number | null) {
@@ -115,6 +153,9 @@ function ChartView({ saved, chart, fresh }: ReadyProps) {
       provider={provider}
       selectedPalaceName={palace?.name ?? null}
       headingId={headingId}
+      perspective={perspective}
+      onPerspectiveChange={setPerspective}
+      attachedLimits={limitAttachment?.label ?? null}
     />
   );
 
@@ -150,11 +191,26 @@ function ChartView({ saved, chart, fresh }: ReadyProps) {
             animate={fresh}
             label={`${saved.input.name}的命盤`}
             centre={<CentreInfo chart={chart} name={saved.input.name} />}
+            overlay={limits.overlay}
           />
+          <LimitControls limits={limits} onChange={setLimitSelection} onToday={jumpToToday} />
         </div>
         <p className="mt-3 text-sm text-ink-muted">
-          點宮位或用方向鍵移動、按 Enter，查看完整星曜與三方四正。
+          點宮位或用方向鍵移動、按 Enter，查看完整星曜與三方四正。選了運限後，各宮會疊上運限宮名（限＝大限、年＝流年、月＝流月）與運限四化。
         </p>
+        {outdated && (
+          <div className="mt-4 max-w-[34em] border-l-2 border-line pl-3">
+            <p>這張命盤用的是排盤當時的排盤設定，和目前設定頁的不同。</p>
+            <button type="button" onClick={() => void recast()} className="mt-2 rounded-control border border-line px-3 py-1 font-kai">
+              改用目前的設定重排
+            </button>
+            {recastError && (
+              <p role="alert" className="mt-2 text-danger">
+                {recastError}
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 桌機：側欄，解讀與宮位詳情兩個分頁 */}
@@ -205,7 +261,8 @@ function ChartView({ saved, chart, fresh }: ReadyProps) {
 export function Chart() {
   const { chartId } = useParams();
   const location = useLocation();
-  const loaded = useChart(chartId);
+  const [version, setVersion] = useState(0);
+  const loaded = useChart(chartId, version);
 
   // 從表單排出來的那一次才播放落位動畫；重新整理或從清單開啟不播。
   const fresh = (location.state as { fresh?: boolean } | null)?.fresh === true;
@@ -225,5 +282,13 @@ export function Chart() {
   }
 
   // 換一張命盤時整個重建，對話與選取狀態不會殘留。
-  return <ChartView key={loaded.saved.id} saved={loaded.saved} chart={loaded.chart} fresh={fresh} />;
+  return (
+    <ChartView
+      key={`${loaded.saved.id}-${version}`}
+      saved={loaded.saved}
+      chart={loaded.chart}
+      fresh={fresh && version === 0}
+      onRecast={() => setVersion((current) => current + 1)}
+    />
+  );
 }

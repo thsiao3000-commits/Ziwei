@@ -47,6 +47,8 @@ export type SavedChart = {
   chartSettings: ChartSettings;
   createdAt: string;
   updatedAt: string;
+  /** 最後開啟時間 */
+  openedAt?: string;
   pinned?: boolean;
 };
 

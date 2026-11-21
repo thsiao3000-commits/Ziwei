@@ -6,6 +6,7 @@ import { effectiveModel, useModelLists, useSettings } from '../settings/store';
 import { parseReply } from './followups';
 import { Markdown } from './Markdown';
 import { palacePrompt, QUICK_PROMPTS, type QuickPrompt } from './prompts';
+import { SCHOOL_NAME, type School } from './serialize';
 import type { AssistantMessage, UserMessage } from './types';
 import type { Pending, Reading } from './useReading';
 
@@ -144,10 +145,25 @@ type Props = {
   /** 選中的宮位名稱，沒有選時為 null */
   selectedPalaceName: string | null;
   headingId: string;
+  perspective: School;
+  onPerspectiveChange: (school: School) => void;
+  /** 盤上選中的運限，下一則提問會帶入；沒有時為 null */
+  attachedLimits: string | null;
 };
 
+const PERSPECTIVES: readonly School[] = ['sanhe', 'feixing', 'panel', 'custom'];
+
 /** 解讀面板：命盤旁邊的對話。 */
-export function ReadingPanel({ reading, configured, provider, selectedPalaceName, headingId }: Props) {
+export function ReadingPanel({
+  reading,
+  configured,
+  provider,
+  selectedPalaceName,
+  headingId,
+  perspective,
+  onPerspectiveChange,
+  attachedLimits,
+}: Props) {
   const id = useId();
   const settings = useSettings();
   const liveList = useModelLists((state) => (provider ? state.lists[provider] : undefined));
@@ -361,6 +377,30 @@ export function ReadingPanel({ reading, configured, provider, selectedPalaceName
         </div>
       )}
 
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor={`${id}-perspective`} className="font-kai text-ink-muted">
+          視角
+        </label>
+        <select
+          id={`${id}-perspective`}
+          className={selectClass}
+          value={perspective}
+          disabled={busy}
+          onChange={(event) => onPerspectiveChange(event.target.value as School)}
+        >
+          {PERSPECTIVES.map((school) => (
+            <option key={school} value={school}>
+              {SCHOOL_NAME[school]}
+            </option>
+          ))}
+        </select>
+        {perspective === 'custom' && !settings.customPerspective.trim() && (
+          <p className="basis-full text-sm text-ink-muted">
+            還沒有填自訂視角的內容，會先用三合派解讀。可以到 <Link to="/settings" className="text-accent underline underline-offset-4">設定頁的「排盤」</Link> 填寫。
+          </p>
+        )}
+      </div>
+
       <div>
         <p className="sr-only" id={`${id}-quick`}>
           快捷提問
@@ -405,6 +445,11 @@ export function ReadingPanel({ reading, configured, provider, selectedPalaceName
           <button type="button" className={`${smallButton} mb-2`} onMouseDown={(event) => event.preventDefault()} onClick={askAboutQuote}>
             追問這段
           </button>
+        )}
+        {(attachedLimits || selectedPalaceName) && (
+          <p className="mb-2 text-sm text-ink-muted">
+            下一則提問會帶入：{[selectedPalaceName, attachedLimits].filter(Boolean).join('、')}
+          </p>
         )}
         <form
           className="flex items-end gap-2"

@@ -47,6 +47,10 @@ test('填表單 → 命盤出現 → 點宮位看到三方四正', async ({ page
   await page.waitForTimeout(1400); // 等落位動畫結束再截圖
   await page.screenshot({ path: testInfo.outputPath('chart.png'), fullPage: true });
 
+  // 頁面不可比視窗寬（橫向捲動列必須留在自己的容器裡）。
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+
   await soul.click();
   await expect(soul).toHaveAttribute('aria-pressed', 'true');
   // 三方四正：本宮、對宮（遷移）、財帛位、官祿位
@@ -113,7 +117,7 @@ test('命盤存在本機：重新整理仍在，出現在我的命盤，可以�
   await expect(page.getByText('命宮：紫微')).toBeVisible();
 
   await page.getByRole('button', { name: '刪除命盤「小明」' }).click();
-  await page.getByRole('button', { name: '確定刪除「小明」' }).click();
+  await page.getByRole('button', { name: '確定刪除「小明」與它的對話' }).click();
   await expect(page.getByText('還沒有命盤。輸入出生資料，排出第一張。')).toBeVisible();
 });
 

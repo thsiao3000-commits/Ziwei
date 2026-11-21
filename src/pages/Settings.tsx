@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { ChartSection } from '../features/settings/ChartSection';
 import { DataSection, KeyStorageChoice } from '../features/settings/DataSection';
 import { ModelSection, configuredProviders } from '../features/settings/ModelSection';
 import { ProviderSection } from '../features/settings/ProviderSection';
 import { useSettings } from '../features/settings/store';
+import { UsageSection } from '../features/settings/UsageSection';
 import { PROVIDER_IDS } from '../lib/llm/types';
 
 /** 設定自動儲存；每次儲存後短暫顯示「已儲存」。 */
@@ -62,11 +64,21 @@ export function Settings() {
         <ModelSection configured={configured} />
       </section>
 
+      <section aria-labelledby="settings-chart" className="mt-12">
+        <h2 id="settings-chart" className="text-[1.5rem]">
+          排盤
+        </h2>
+        <ChartSection />
+      </section>
+
       <section aria-labelledby="settings-data" className="mt-12">
         <h2 id="settings-data" className="text-[1.5rem]">
           外觀與資料
         </h2>
         <DataSection />
+        <div className="mt-8">
+          <UsageSection />
+        </div>
       </section>
     </div>
   );

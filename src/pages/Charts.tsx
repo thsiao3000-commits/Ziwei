@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { computeChart } from '../features/chart/engine';
 import { formatSolarDate, soulSummary } from '../features/chart/layout';
-import { deleteChart, listCharts } from '../features/chart/store';
+import { deleteChart, listCharts, updateChart } from '../features/chart/store';
 import { timeSlotLabel } from '../features/chart/time';
 import type { SavedChart } from '../features/chart/types';
 
 type Row = { saved: SavedChart; birthday: string; soul: string };
+
+const button = 'rounded-control border border-line px-3 py-1 font-kai';
 
 function toRow(saved: SavedChart): Row {
   const { input } = saved;
@@ -20,10 +22,24 @@ function toRow(saved: SavedChart): Row {
   }
 }
 
+/** 「2026-11-21T13:05:00.000Z」→ 當地時間的「2026/11/21 21:05」 */
+function formatTime(iso: string | undefined): string {
+  if (!iso) return '還沒開啟過';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function Charts() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+
+  async function load() {
+    setRows((await listCharts()).map(toRow));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +54,15 @@ export function Charts() {
       cancelled = true;
     };
   }, []);
+
+  async function change(id: string, patch: Parameters<typeof updateChart>[1]) {
+    try {
+      await updateChart(id, patch);
+      await load();
+    } catch {
+      setError('變更沒有存成功，請重新整理後再試一次。');
+    }
+  }
 
   async function remove(id: string) {
     try {
@@ -80,41 +105,88 @@ export function Charts() {
       )}
 
       {rows !== null && rows.length > 0 && (
-        <ul className="mt-6 max-w-[44rem] border-t border-line-soft">
+        <ul className="mt-6 max-w-[46rem] border-t border-line-soft">
           {rows.map(({ saved, birthday, soul }) => (
-            <li key={saved.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-line-soft py-4">
+            <li key={saved.id} className="grid gap-3 border-b border-line-soft py-4">
               <div className="min-w-0">
-                <Link to={`/chart/${saved.id}`} className="font-kai text-[1.25rem] font-bold underline-offset-4 hover:underline">
-                  {saved.input.name}
-                </Link>
+                {renaming?.id === saved.id ? (
+                  <form
+                    className="flex flex-wrap gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const name = renaming.name;
+                      setRenaming(null);
+                      void change(saved.id, { name });
+                    }}
+                  >
+                    <label htmlFor={`name-${saved.id}`} className="sr-only">
+                      稱呼
+                    </label>
+                    <input
+                      id={`name-${saved.id}`}
+                      className="min-w-0 flex-1 rounded-control border border-line bg-bg px-3 py-1 text-ink"
+                      value={renaming.name}
+                      maxLength={20}
+                      autoFocus
+                      onChange={(event) => setRenaming({ id: saved.id, name: event.target.value })}
+                    />
+                    <button type="submit" className={button}>
+                      儲存稱呼
+                    </button>
+                    <button type="button" className={button} onClick={() => setRenaming(null)}>
+                      取消
+                    </button>
+                  </form>
+                ) : (
+                  <p>
+                    <Link to={`/chart/${saved.id}`} className="font-kai text-[1.25rem] font-bold underline-offset-4 hover:underline">
+                      {saved.input.name}
+                    </Link>
+                    {saved.pinned && <span className="ml-2 border border-line px-1 font-kai text-sm">已釘選</span>}
+                  </p>
+                )}
                 <p className="text-sm text-ink-muted">
                   {saved.input.gender === 'male' ? '男' : '女'}　{birthday}
                 </p>
                 {soul && <p className="font-kai text-sm">命宮：{soul}</p>}
+                <p className="text-sm text-ink-muted">最後開啟：{formatTime(saved.openedAt)}</p>
               </div>
-              {confirming === saved.id ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void remove(saved.id)}
-                    className="rounded-control bg-danger px-3 py-1 font-kai text-bg"
-                  >
-                    確定刪除「{saved.input.name}」
-                  </button>
-                  <button type="button" onClick={() => setConfirming(null)} className="rounded-control border border-line px-3 py-1 font-kai">
-                    保留
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirming(saved.id)}
-                  className="rounded-control border border-line px-3 py-1 font-kai"
-                  aria-label={`刪除命盤「${saved.input.name}」`}
-                >
-                  刪除命盤
-                </button>
-              )}
+
+              <div className="flex flex-wrap gap-2">
+                {confirming === saved.id ? (
+                  <>
+                    <button type="button" onClick={() => void remove(saved.id)} className="rounded-control bg-danger px-3 py-1 font-kai text-bg">
+                      確定刪除「{saved.input.name}」與它的對話
+                    </button>
+                    <button type="button" onClick={() => setConfirming(null)} className={button}>
+                      保留
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={button}
+                      aria-pressed={saved.pinned === true}
+                      aria-label={`${saved.pinned ? '取消釘選' : '釘選'}命盤「${saved.input.name}」`}
+                      onClick={() => void change(saved.id, { pinned: !saved.pinned })}
+                    >
+                      {saved.pinned ? '取消釘選' : '釘選'}
+                    </button>
+                    <button
+                      type="button"
+                      className={button}
+                      aria-label={`重新命名命盤「${saved.input.name}」`}
+                      onClick={() => setRenaming({ id: saved.id, name: saved.input.name })}
+                    >
+                      重新命名
+                    </button>
+                    <button type="button" onClick={() => setConfirming(saved.id)} className={button} aria-label={`刪除命盤「${saved.input.name}」`}>
+                      刪除命盤
+                    </button>
+                  </>
+                )}
+              </div>
             </li>
           ))}
         </ul>

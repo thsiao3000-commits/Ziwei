@@ -79,6 +79,13 @@ export function PalaceDetail({ chart, palace, onClose, headingId, onInterpret }:
         </p>
       )}
 
+      {palace.isEmpty && (
+        <p className="mt-3 max-w-[34em] border-l-2 border-line pl-3">
+          這一宮沒有主星（空宮）。一般會借對宮{around[0]?.palace?.name}的主星來看：
+          <span className="font-kai">{majorNames(around[0]?.palace)}</span>。借來的星力量較弱，仍以本宮的輔星與四化為主。
+        </p>
+      )}
+
       <dl className="mt-4 grid gap-2">
         <StarRow title="主星" palace={palace} kind="majorStars" />
         <StarRow title="輔星" palace={palace} kind="minorStars" />

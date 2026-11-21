@@ -14,6 +14,8 @@ type Preferences = {
   /** null 表示還沒選過：手機用精簡，桌機用標準 */
   density: Density | null;
   setDensity: (density: Density) => void;
+  /** 回到自動（手機精簡、電腦標準） */
+  resetDensity: () => void;
 };
 
 export const usePreferences = create<Preferences>()(
@@ -21,6 +23,7 @@ export const usePreferences = create<Preferences>()(
     (set) => ({
       density: null,
       setDensity: (density) => set({ density }),
+      resetDensity: () => set({ density: null }),
     }),
     {
       name: prefixed('preferences'),

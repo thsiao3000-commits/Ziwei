@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { DEFAULT_MODEL } from '../../lib/llm/models.config';
+import { DEFAULT_CHART_SETTINGS, type ChartSettings } from '../chart/types';
 import type { Effort, ModelInfo, ProviderId } from '../../lib/llm/types';
 import { prefixed } from '../../lib/storage/keys';
 import type { KeyStorageMode } from './keys';
@@ -28,6 +29,12 @@ export type SettingsData = {
   /** 提問時附上稱呼與出生年月日；預設關閉，只送命盤內容 */
   includeBirthDate: boolean;
   keyStatus: Record<ProviderId, KeyStatus>;
+  /** 新排的命盤使用的排盤設定 */
+  chartDefaults: ChartSettings;
+  /** 預設的解讀取向 */
+  school: 'sanhe' | 'feixing';
+  /** 自訂視角的指示，只存本機 */
+  customPerspective: string;
 };
 
 export const DEFAULT_SETTINGS: SettingsData = {
@@ -40,6 +47,9 @@ export const DEFAULT_SETTINGS: SettingsData = {
   verbosity: 'standard',
   includeBirthDate: false,
   keyStatus: { openai: { state: 'unset' }, anthropic: { state: 'unset' } },
+  chartDefaults: { ...DEFAULT_CHART_SETTINGS },
+  school: 'sanhe',
+  customPerspective: '',
 };
 
 type SettingsState = SettingsData & {
@@ -82,6 +92,9 @@ export function pickSettings(state: SettingsData): SettingsData {
     verbosity: state.verbosity,
     includeBirthDate: state.includeBirthDate,
     keyStatus: state.keyStatus,
+    chartDefaults: state.chartDefaults,
+    school: state.school,
+    customPerspective: state.customPerspective,
   };
 }
 

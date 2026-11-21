@@ -7,7 +7,8 @@ import { getKey } from '../settings/keys';
 import { effectiveModel, useSettings } from '../settings/store';
 import { buildSystemPrompt, CONTINUE_MESSAGE, type QuickPrompt } from './prompts';
 import { buildAttachment, titleFrom, toChatMessages, todayString } from './request';
-import { serializeChart } from './serialize';
+import { recordUsage } from '../settings/usage';
+import { serializeChart, type School } from './serialize';
 import { createConversation, deleteConversation, listConversations, saveConversation } from './store';
 import type { AssistantMessage, Conversation, Message, UserMessage } from './types';
 
@@ -43,9 +44,13 @@ type Options = {
   chart: ChartData;
   selectedPalace: number | null;
   provider: ProviderId | null;
+  /** 這次提問採用的解讀視角 */
+  perspective: School;
+  /** 盤上選中的運限要附上的資料 */
+  limits?: { label: string; text: string } | undefined;
 };
 
-export function useReading({ saved, chart, selectedPalace, provider }: Options): Reading {
+export function useReading({ saved, chart, selectedPalace, provider, perspective, limits }: Options): Reading {
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -125,11 +130,12 @@ export function useReading({ saved, chart, selectedPalace, provider }: Options):
       try {
         const today = todayString();
         const system = buildSystemPrompt({
-          school: 'sanhe',
+          school: perspective,
           verbosity: settings.verbosity,
+          customPerspective: settings.customPerspective,
           today,
           chartContext: serializeChart(chart, computeHoroscope(saved.input, saved.chartSettings, today), {
-            school: 'sanhe',
+            school: perspective,
             // 預設不送稱呼與出生年月日（HANDOFF 第 6.1 節）。
             ...(settings.includeBirthDate ? { birth: saved.input } : {}),
           }),
@@ -158,6 +164,7 @@ export function useReading({ saved, chart, selectedPalace, provider }: Options):
           } else if (event.type === 'notice') {
             notice = event.message;
           } else if (event.type === 'done') {
+            if (event.usage) recordUsage(provider, model, event.usage);
             await finish(message({ ...(event.usage ? { usage: event.usage } : {}), ...(event.truncated ? { incomplete: 'truncated' } : {}) }));
             return;
           } else {
@@ -182,7 +189,7 @@ export function useReading({ saved, chart, selectedPalace, provider }: Options):
         );
       }
     },
-    [chart, commit, provider, saved],
+    [chart, commit, perspective, provider, saved],
   );
 
   const send = useCallback(
@@ -191,7 +198,7 @@ export function useReading({ saved, chart, selectedPalace, provider }: Options):
       if (!text || abort.current) return;
       setProblem('');
       const base = live.current && live.current.id === currentId ? live.current : (current ?? createConversation(saved.id));
-      const attachment = buildAttachment({ chart, saved, text, palaceNames: quick?.palaces ?? [], selectedPalace });
+      const attachment = buildAttachment({ chart, saved, text, palaceNames: quick?.palaces ?? [], selectedPalace, limits });
       const userMessage: UserMessage = {
         role: 'user',
         content: text,
@@ -206,7 +213,7 @@ export function useReading({ saved, chart, selectedPalace, provider }: Options):
       await commit(conversation);
       await run(conversation);
     },
-    [chart, commit, current, currentId, run, saved, selectedPalace],
+    [chart, commit, current, currentId, limits, run, saved, selectedPalace],
   );
 
   const stop = useCallback(() => {

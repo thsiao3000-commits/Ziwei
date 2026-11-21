@@ -1,4 +1,13 @@
-import { MUTAGENS, type BirthInput, type ChartData, type HoroscopeData, type LimitInfo, type PalaceInfo, type StarInfo } from '../chart/types';
+import {
+  MUTAGENS,
+  type BirthInput,
+  type ChartData,
+  type HoroscopeData,
+  type LimitInfo,
+  type Limits,
+  type PalaceInfo,
+  type StarInfo,
+} from '../chart/types';
 
 /**
  * 把排盤結果轉成精簡、穩定的文字，放進系統提示詞（HANDOFF 第 6.1 節）。
@@ -8,11 +17,22 @@ import { MUTAGENS, type BirthInput, type ChartData, type HoroscopeData, type Lim
  * 介面上有說明）。稱呼、國曆與農曆生日、出生時辰預設不送；使用者開啟
  * 「提問時附上出生年月日」才加上。
  */
-export type School = 'sanhe' | 'feixing';
+/** 解讀視角（HANDOFF 第 6.6 節）。 */
+export type School = 'sanhe' | 'feixing' | 'panel' | 'custom';
 
 export const SCHOOL_LABEL: Record<School, string> = {
   sanhe: '三合為主（重星曜組合、三方四正、格局）',
   feixing: '飛星四化為主（重宮干飛化、自化、忌的流向）',
+  panel: '多派會診（三合與飛星四化並陳）',
+  custom: '自訂視角',
+};
+
+/** 視角選單上的短名稱。 */
+export const SCHOOL_NAME: Record<School, string> = {
+  sanhe: '三合派',
+  feixing: '飛星四化派',
+  panel: '多派會診',
+  custom: '自訂視角',
 };
 
 export type SerializeOptions = {
@@ -99,6 +119,32 @@ export function serializeYear(chart: ChartData, year: number, horoscope: Horosco
     ? `當時大限：${chart.palaces[horoscope.decadal.palaceIndex]?.name ?? ''}（${horoscope.decadal.ageRange[0]}–${horoscope.decadal.ageRange[1]} 歲）｜${limitLine(chart, horoscope.decadal)}`
     : '當時尚未起運';
   return [`【流年 ${year}】虛歲 ${horoscope.nominalAge}`, decadal, `流年：${limitLine(chart, horoscope.yearly)}`].join('\n');
+}
+
+/** 使用者在盤上選中的運限（大限、流年、流月），提問時附上。沒有選時回傳 undefined。 */
+export function serializeLimits(chart: ChartData, limits: Limits): { label: string; text: string } | undefined {
+  const { selection, overlay } = limits;
+  const labels: string[] = [];
+  const lines: string[] = ['【盤上選中的運限】'];
+
+  const decadal = selection.decadal === null ? undefined : limits.decadals[selection.decadal];
+  if (decadal && overlay.decadal) {
+    labels.push(`大限 ${decadal.ageRange[0]}–${decadal.ageRange[1]} 歲`);
+    lines.push(`大限：${decadal.palaceName}（${decadal.ageRange[0]}–${decadal.ageRange[1]} 歲）｜${limitLine(chart, overlay.decadal)}`);
+  }
+  const year = limits.years.find((item) => item.year === selection.year);
+  if (year && overlay.yearly) {
+    labels.push(`${year.year} 年流年`);
+    lines.push(`流年 ${year.year}（虛歲 ${year.age}）：${limitLine(chart, overlay.yearly)}`);
+  }
+  const month = selection.month === null ? undefined : limits.months[selection.month];
+  if (month && overlay.monthly) {
+    labels.push(`農曆${month.label}流月`);
+    lines.push(`流月 農曆${month.label}：${limitLine(chart, overlay.monthly)}`);
+  }
+
+  if (labels.length === 0) return undefined;
+  return { label: labels.join('、'), text: lines.join('\n') };
 }
 
 const DIVIDE = { normal: '正月初一', exact: '立春' } as const;
