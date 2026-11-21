@@ -32,10 +32,12 @@ type Props = {
   palace: PalaceInfo;
   onClose: () => void;
   headingId: string;
+  /** 有設定金鑰且沒有回覆在產生時才提供 */
+  onInterpret?: (() => void) | undefined;
 };
 
 /** 宮位詳情：完整星曜、三方四正、宮干飛化。桌機放側欄，手機放底部抽屜。 */
-export function PalaceDetail({ chart, palace, onClose, headingId }: Props) {
+export function PalaceDetail({ chart, palace, onClose, headingId, onInterpret }: Props) {
   const around = [
     { role: '對宮', palace: chart.palaces[palace.surrounded.opposite] },
     { role: '財帛位', palace: chart.palaces[palace.surrounded.wealth] },
@@ -68,6 +70,14 @@ export function PalaceDetail({ chart, palace, onClose, headingId }: Props) {
           關閉
         </button>
       </div>
+
+      {onInterpret && (
+        <p className="mt-3">
+          <button type="button" onClick={onInterpret} className="rounded-control bg-accent px-4 py-2 font-kai font-bold text-accent-ink">
+            解讀這個宮位
+          </button>
+        </p>
+      )}
 
       <dl className="mt-4 grid gap-2">
         <StarRow title="主星" palace={palace} kind="majorStars" />

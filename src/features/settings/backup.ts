@@ -1,6 +1,7 @@
 import { computeChart } from '../chart/engine';
 import { getDB } from '../../lib/storage/db';
 import type { SavedChart } from '../chart/types';
+import type { Conversation } from '../reading/types';
 import { usePreferences, type Density } from './preferences';
 import { DEFAULT_SETTINGS, pickSettings, useSettings, type SettingsData } from './store';
 
@@ -14,6 +15,8 @@ export type Backup = {
   settings: Omit<SettingsData, 'keyStatus'>;
   preferences: { density: Density | null };
   charts: SavedChart[];
+  /** 各命盤的對話 */
+  conversations: Conversation[];
 };
 
 export async function createBackup(): Promise<Backup> {
@@ -26,6 +29,7 @@ export async function createBackup(): Promise<Backup> {
     settings,
     preferences: { density: usePreferences.getState().density },
     charts: await (await getDB()).getAll('charts'),
+    conversations: await (await getDB()).getAll('conversations'),
   };
 }
 
@@ -43,6 +47,16 @@ function isSavedChart(value: unknown): value is SavedChart {
   } catch {
     return false;
   }
+}
+
+function isConversation(value: unknown, chartIds: ReadonlySet<string>): value is Conversation {
+  if (!isRecord(value) || typeof value.id !== 'string' || !/^[a-z0-9]{8,32}$/.test(value.id)) return false;
+  // 只收屬於這份備份裡某張命盤的對話。
+  if (typeof value.chartId !== 'string' || !chartIds.has(value.chartId)) return false;
+  if (typeof value.title !== 'string' || !Array.isArray(value.messages)) return false;
+  return value.messages.every(
+    (message) => isRecord(message) && (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string',
+  );
 }
 
 export class BackupError extends Error {}
@@ -68,6 +82,9 @@ export function parseBackup(text: string): Backup {
     settings: settings as Backup['settings'],
     preferences: { density: (preferences.density as Density | null | undefined) ?? null },
     charts,
+    conversations: Array.isArray(data.conversations)
+      ? data.conversations.filter((item): item is Conversation => isConversation(item, new Set(charts.map((chart) => chart.id))))
+      : [],
   };
 }
 
@@ -79,8 +96,12 @@ const DENSITY_VALUES = ['compact', 'standard', 'full'];
 /** 把備份寫回本機。命盤以 id 合併，同 id 的以備份為準。回傳匯入的命盤數。 */
 export async function restoreBackup(backup: Backup): Promise<number> {
   const db = await getDB();
-  const tx = db.transaction('charts', 'readwrite');
-  await Promise.all([...backup.charts.map((chart) => tx.store.put(chart)), tx.done]);
+  const tx = db.transaction(['charts', 'conversations'], 'readwrite');
+  await Promise.all([
+    ...backup.charts.map((chart) => tx.objectStore('charts').put(chart)),
+    ...backup.conversations.map((conversation) => tx.objectStore('conversations').put(conversation)),
+    tx.done,
+  ]);
 
   const s = backup.settings as Partial<SettingsData>;
   const current = useSettings.getState();

@@ -61,7 +61,7 @@ export function DataSection() {
       link.download = `ziwei-backup-${backup.exportedAt.slice(0, 10)}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      report(`已匯出 ${backup.charts.length} 張命盤與設定。匯出檔不含 API 金鑰。`);
+      report(`已匯出 ${backup.charts.length} 張命盤、${backup.conversations.length} 段對話與設定。匯出檔不含 API 金鑰。`);
     } catch {
       report('匯出失敗：讀不到這台裝置上的資料。請重新整理後再試。', true);
     }
@@ -91,7 +91,7 @@ export function DataSection() {
 
       <div>
         <p className={legendClass}>備份</p>
-        <p className="max-w-[34em] text-sm text-ink-muted">匯出檔包含命盤與設定，不含 API 金鑰。匯入時，同一張命盤以備份檔為準。</p>
+        <p className="max-w-[34em] text-sm text-ink-muted">匯出檔包含命盤、對話與設定，不含 API 金鑰。匯入時，同一張命盤以備份檔為準。</p>
         <div className="mt-2 flex flex-wrap gap-2">
           <button type="button" className={buttonClass} onClick={() => void exportAll()}>
             匯出全部資料

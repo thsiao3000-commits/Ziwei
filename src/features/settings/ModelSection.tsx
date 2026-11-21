@@ -170,7 +170,7 @@ export function ModelSection({ configured }: { configured: readonly ProviderId[]
           <span>
             <span className={legendClass}>提問時附上出生年月日</span>
             <span className="block max-w-[34em] text-sm text-ink-muted">
-              關閉時只把命盤內容（宮位、星曜、四化、運限）送給 AI 供應商，不送稱呼與出生年月日。
+              關閉時只把命盤內容（宮位、星曜、四化、運限）送給 AI 供應商，不送稱呼、出生年月日、時辰與四柱。想請 AI 參考四柱干支時再開啟：四柱可以反推出生日期。
             </span>
           </span>
         </label>

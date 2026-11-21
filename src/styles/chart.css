@@ -368,3 +368,122 @@
     animation: none;
   }
 }
+
+/* 解讀文字：明體，行長 30–36 個中文字，行高比無襯線字體略大。 */
+.reading-prose {
+  max-width: var(--measure);
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+
+.reading-prose > * + * {
+  margin-top: 0.9em;
+}
+
+.reading-prose h1,
+.reading-prose h2,
+.reading-prose h3,
+.reading-prose h4 {
+  margin-top: 1.4em;
+  font-size: 1.125rem;
+}
+
+.reading-prose ul,
+.reading-prose ol {
+  padding-left: 1.4em;
+}
+
+.reading-prose ul {
+  list-style: disc;
+}
+
+.reading-prose ol {
+  list-style: decimal;
+}
+
+.reading-prose li + li {
+  margin-top: 0.35em;
+}
+
+.reading-prose strong {
+  font-weight: 700;
+}
+
+.reading-prose blockquote {
+  padding-left: 0.9em;
+  border-left: 2px solid var(--line-soft);
+  color: var(--ink-muted);
+}
+
+.reading-prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.reading-prose hr {
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.reading-prose code {
+  font-size: 0.9em;
+}
+
+.reading-prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.reading-prose th,
+.reading-prose td {
+  padding: 0.35em 0.7em;
+  border: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+}
+
+.reading-prose th {
+  font-family: var(--font-kai);
+}
+
+/* 快捷提問與建議追問：手機上橫向捲動。 */
+.chip-row {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.chip {
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 0.3em 0.8em;
+  font-family: var(--font-kai);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.chip:disabled {
+  border-color: var(--line-soft);
+  color: var(--ink-muted);
+}
+
+.chip-wrap {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.chip-wrap .chip {
+  white-space: normal;
+  text-align: left;
+}

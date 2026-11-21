@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { saveChart } from '../src/features/chart/store';
+import { deleteChart, saveChart } from '../src/features/chart/store';
+import { createConversation, listConversations, saveConversation } from '../src/features/reading/store';
 import { DEFAULT_CHART_SETTINGS } from '../src/features/chart/types';
 import { BackupError, createBackup, parseBackup, restoreBackup } from '../src/features/settings/backup';
 import { clearKey, getKey, maskKey, moveKeys, setKey } from '../src/features/settings/keys';
@@ -17,6 +18,7 @@ beforeEach(async () => {
   }
   useSettings.setState({ ...DEFAULT_SETTINGS });
   await (await getDB()).clear('charts');
+  await (await getDB()).clear('conversations');
 });
 
 describe('金鑰儲存', () => {
@@ -131,6 +133,32 @@ describe('備份', () => {
     expect(useSettings.getState().keyStorage).toBe('local');
     expect(useSettings.getState().keyStatus.openai).toEqual({ state: 'unset' });
     expect(getKey('openai')).toBe(FAKE_KEY);
+  });
+
+  it('對話跟著命盤一起匯出與匯入；不屬於任何命盤的對話會被略過', async () => {
+    const saved = await saveChart(input, DEFAULT_CHART_SETTINGS);
+    const conversation = {
+      ...createConversation(saved.id, '事業'),
+      messages: [{ role: 'user' as const, content: '事業如何？', createdAt: '' }],
+    };
+    await saveConversation(conversation);
+    const backup = await createBackup();
+    expect(backup.conversations).toHaveLength(1);
+
+    await (await getDB()).clear('charts');
+    await (await getDB()).clear('conversations');
+    const orphan = { ...conversation, id: 'orphan0000000001', chartId: 'nochart000000001' };
+    const parsed = parseBackup(JSON.stringify({ ...backup, conversations: [...backup.conversations, orphan, { id: 'x' }] }));
+    expect(parsed.conversations.map((item) => item.id)).toEqual([conversation.id]);
+    await restoreBackup(parsed);
+    expect((await listConversations(saved.id)).map((item) => item.title)).toEqual(['事業']);
+  });
+
+  it('刪除命盤時一併刪除它的對話', async () => {
+    const saved = await saveChart(input, DEFAULT_CHART_SETTINGS);
+    await saveConversation(createConversation(saved.id));
+    await deleteChart(saved.id);
+    expect(await listConversations(saved.id)).toEqual([]);
   });
 
   it('不是本站的備份檔會被拒絕', () => {
