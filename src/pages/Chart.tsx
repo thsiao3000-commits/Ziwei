@@ -4,10 +4,12 @@ import { CentreInfo } from '../features/chart/CentreInfo';
 import { ChartBoard } from '../features/chart/ChartBoard';
 import { DensityControl } from '../features/chart/DensityControl';
 import { computeChart, computeHoroscope, computeLimits } from '../features/chart/engine';
+import { renderChartImage } from '../features/chart/exportImage';
 import { LimitControls } from '../features/chart/LimitControls';
 import { PalaceDetail } from '../features/chart/PalaceDetail';
 import { getChart, touchChart, updateChart } from '../features/chart/store';
 import { NO_LIMITS, type ChartData, type ChartSettings, type LimitSelection, type SavedChart } from '../features/chart/types';
+import { conversationToMarkdown } from '../features/reading/exportMarkdown';
 import { palacePrompt } from '../features/reading/prompts';
 import { ReadingPanel } from '../features/reading/ReadingPanel';
 import { todayString } from '../features/reading/request';
@@ -16,6 +18,7 @@ import { useReading } from '../features/reading/useReading';
 import { configuredProviders } from '../features/settings/ModelSection';
 import { defaultDensity, usePreferences } from '../features/settings/preferences';
 import { useSettings } from '../features/settings/store';
+import { downloadBlob, safeFilename } from '../lib/download';
 
 type Loaded =
   | { status: 'loading' }
@@ -128,6 +131,40 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
 
   const reading = useReading({ saved, chart, selectedPalace: selected, provider, perspective, limits: limitAttachment });
 
+  // 匯出：命盤圖（PNG）與解讀（Markdown）。都在瀏覽器裡產生，不送出任何請求。
+  const [anonymous, setAnonymous] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportNote, setExportNote] = useState<{ text: string; failed: boolean } | null>(null);
+
+  async function exportImage() {
+    setExporting(true);
+    setExportNote(null);
+    try {
+      const blob = await renderChartImage({
+        chart,
+        name: saved.input.name,
+        density,
+        overlay: limits.overlay,
+        focus: selected ?? chart.soulPalaceIndex,
+        anonymous,
+      });
+      downloadBlob(blob, anonymous ? '紫微命盤.png' : `紫微命盤-${safeFilename(saved.input.name, '命盤')}.png`);
+      setExportNote({ text: anonymous ? '已下載命盤圖，圖上沒有稱呼與出生資料。' : '已下載命盤圖，圖上有稱呼與出生資料。', failed: false });
+    } catch {
+      setExportNote({ text: '命盤圖沒有產生成功。請重新整理頁面後再試一次。', failed: true });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function exportConversation() {
+    const conversation = reading.current;
+    if (!conversation) return;
+    const markdown = conversationToMarkdown({ conversation, chart, name: saved.input.name, anonymous, exportedOn: todayString() });
+    downloadBlob(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }), `紫微解讀-${safeFilename(conversation.title, '對話')}.md`);
+    setExportNote({ text: `已下載這段對話（Markdown）${anonymous ? '，檔案裡沒有稱呼與出生資料' : ''}。`, failed: false });
+  }
+
   // 從「時辰對照」頁按了「請 AI 協助分辨」過來：對話讀取完成後，開一段新對話送出一次。
   const navigate = useNavigate();
   const asked = useRef(false);
@@ -168,6 +205,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
       provider={provider}
       selectedPalaceName={palace?.name ?? null}
       headingId={headingId}
+      onExport={exportConversation}
       perspective={perspective}
       onPerspectiveChange={setPerspective}
       attachedLimits={limitAttachment?.label ?? null}
@@ -218,6 +256,35 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
         <p className="mt-3 text-sm text-ink-muted">
           點宮位或用方向鍵移動、按 Enter，查看完整星曜與三方四正。選了運限後，各宮會疊上運限宮名（限＝大限、年＝流年、月＝流月）與運限四化。
         </p>
+        <div className="mt-5 border-t border-line-soft pt-4">
+          <h2 className="text-[1.125rem]">匯出</h2>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => void exportImage()}
+              className="rounded-control border border-line px-3 py-1 font-kai disabled:border-line-soft disabled:text-ink-muted"
+            >
+              {exporting ? '產生命盤圖中' : '下載命盤圖（PNG）'}
+            </button>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--accent)]"
+                checked={anonymous}
+                onChange={(event) => setAnonymous(event.target.checked)}
+              />
+              不放稱呼與出生資料
+            </label>
+          </div>
+          <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
+            命盤圖依目前的顯示密度、選中的宮位與運限產生。要傳給別人時，可以勾選「不放稱呼與出生資料」；這個選項也套用在匯出的對話。
+          </p>
+          <p aria-live="polite" className={`mt-1 min-h-[1.6em] text-sm ${exportNote?.failed ? 'text-danger' : 'text-ink-muted'}`}>
+            {exportNote?.text}
+          </p>
+        </div>
+
         {outdated && (
           <div className="mt-4 max-w-[34em] border-l-2 border-line pl-3">
             <p>這張命盤用的是排盤當時的排盤設定，和目前設定頁的不同。</p>

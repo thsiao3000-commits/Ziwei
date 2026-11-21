@@ -155,6 +155,8 @@ type Props = {
   /** 選中的宮位名稱，沒有選時為 null */
   selectedPalaceName: string | null;
   headingId: string;
+  /** 把目前這段對話匯出成 Markdown */
+  onExport: () => void;
   perspective: School;
   onPerspectiveChange: (school: School) => void;
   /** 盤上選中的運限，下一則提問會帶入；沒有時為 null */
@@ -170,6 +172,7 @@ export function ReadingPanel({
   provider,
   selectedPalaceName,
   headingId,
+  onExport,
   perspective,
   onPerspectiveChange,
   attachedLimits,
@@ -333,6 +336,9 @@ export function ReadingPanel({
             <>
               <button type="button" className={smallButton} disabled={busy} onClick={() => setRenaming(current.title)}>
                 重新命名
+              </button>
+              <button type="button" className={smallButton} disabled={busy || current.messages.length === 0} onClick={onExport}>
+                匯出這段對話
               </button>
               <button type="button" className={smallButton} disabled={busy} onClick={() => setConfirmingDelete(true)}>
                 刪除對話
