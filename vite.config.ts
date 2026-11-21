@@ -68,6 +68,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // 排盤測試一次算十幾張盤，CI 的機器比較慢，預設的 5 秒不夠。
+    testTimeout: 30_000,
     include: ['tests/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
   },
 });
