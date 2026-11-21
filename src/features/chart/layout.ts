@@ -42,16 +42,6 @@ export function neighbour(index: number, dRow: number, dCol: number): number {
   return index;
 }
 
-/**
- * 三方四正連線的端點：取宮位朝向中宮的那一點（落在中宮方框的邊上），
- * 連線只經過中宮，不會壓到其他宮位的星曜。座標以格為單位（0–4）。
- */
-export function anchorPoint(index: number): { x: number; y: number } {
-  const pos = GRID_POSITIONS[index] ?? { row: 1, col: 1 };
-  const clamp = (value: number) => Math.min(3, Math.max(1, value));
-  return { x: clamp(pos.col - 0.5), y: clamp(pos.row - 0.5) };
-}
-
 /** 從命宮開始、依十二宮順序的落位次序（首次排盤動畫用）。 */
 export function settleOrder(chart: ChartData, index: number): number {
   return (chart.soulPalaceIndex - index + 12) % 12;

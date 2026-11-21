@@ -1,6 +1,6 @@
-import { useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import type { Density } from '../settings/preferences';
-import { anchorPoint, GRID_POSITIONS, neighbour, palaceLabel, settleOrder } from './layout';
+import { GRID_POSITIONS, neighbour, palaceLabel, settleOrder } from './layout';
 import type { ChartData, LimitInfo, Limits, Mutagen, PalaceInfo, StarInfo } from './types';
 
 const MUTAGEN_CLASS: Record<Mutagen, string> = {
@@ -146,6 +146,8 @@ function overlayLabel(palace: PalaceInfo, layers: readonly ActiveLayer[]): strin
   return `。${parts.join('。')}`;
 }
 
+type Geometry = { width: number; height: number; anchors: { x: number; y: number }[] };
+
 type Props = {
   chart: ChartData;
   density: Density;
@@ -163,7 +165,40 @@ type Props = {
 
 export function ChartBoard({ chart, density, selected, onSelect, centre, animate = false, label, overlay }: Props) {
   const cells = useRef<(HTMLButtonElement | null)[]>([]);
+  const board = useRef<HTMLDivElement>(null);
+  const centreBox = useRef<HTMLDivElement>(null);
   const layers = activeLayers(overlay);
+
+  // 三方四正連線的端點要照實際版面量：完整密度或疊上運限時，命盤不是正方形，各列高度也不同。
+  const [geometry, setGeometry] = useState<Geometry | null>(null);
+  useEffect(() => {
+    const root = board.current;
+    const centreElement = centreBox.current;
+    if (!root || !centreElement || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const frame = root.getBoundingClientRect();
+      const box = centreElement.getBoundingClientRect();
+      const inner = { left: box.left - frame.left, top: box.top - frame.top, right: box.right - frame.left, bottom: box.bottom - frame.top };
+      const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+      setGeometry({
+        width: frame.width,
+        height: frame.height,
+        // 取宮位中心朝向中宮的那一點（落在中宮方框的邊上），連線只經過中宮。
+        anchors: cells.current.map((cell) => {
+          if (!cell) return { x: 0, y: 0 };
+          const rect = cell.getBoundingClientRect();
+          return {
+            x: clamp(rect.left - frame.left + rect.width / 2, inner.left, inner.right),
+            y: clamp(rect.top - frame.top + rect.height / 2, inner.top, inner.bottom),
+          };
+        }),
+      });
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    observer.observe(centreElement);
+    return () => observer.disconnect();
+  }, []);
 
   // 沒選宮位時，連線畫命宮的三方四正，但不淡化其他宮位。
   const focus = selected ?? chart.soulPalaceIndex;
@@ -190,20 +225,23 @@ export function ChartBoard({ chart, density, selected, onSelect, centre, animate
     }
   }
 
-  const target = anchorPoint(focus);
-  const lines = focusPalace
-    ? {
-        triangle: [focus, focusPalace.surrounded.wealth, focusPalace.surrounded.career]
-          .map((i) => anchorPoint(i))
-          .map((p) => `${p.x},${p.y}`)
-          .join(' '),
-        opposite: anchorPoint(focusPalace.surrounded.opposite),
-      }
-    : null;
+  const point = (index: number) => geometry?.anchors[index] ?? { x: 0, y: 0 };
+  const target = point(focus);
+  const lines =
+    focusPalace && geometry && geometry.width > 0
+      ? {
+          triangle: [focus, focusPalace.surrounded.wealth, focusPalace.surrounded.career]
+            .map((index) => point(index))
+            .map((p) => `${p.x},${p.y}`)
+            .join(' '),
+          opposite: point(focusPalace.surrounded.opposite),
+        }
+      : null;
 
   return (
     <div className="chart-frame">
     <div
+      ref={board}
       role="group"
       aria-label={label}
       className={`chart-board density-${density}${animate ? ' chart-animate' : ''}${selected !== null ? ' has-selection' : ''}${layers.length > 0 ? ' has-overlay' : ''}`}
@@ -243,10 +281,12 @@ export function ChartBoard({ chart, density, selected, onSelect, centre, animate
         );
       })}
 
-      <div className="chart-centre">{centre}</div>
+      <div ref={centreBox} className="chart-centre">
+        {centre}
+      </div>
 
-      {lines && (
-        <svg className="chart-lines" viewBox="0 0 4 4" preserveAspectRatio="none" aria-hidden="true">
+      {lines && geometry && (
+        <svg className="chart-lines" viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" aria-hidden="true">
           <polygon points={lines.triangle} />
           <line x1={target.x} y1={target.y} x2={lines.opposite.x} y2={lines.opposite.y} />
         </svg>

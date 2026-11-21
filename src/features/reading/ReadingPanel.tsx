@@ -1,14 +1,24 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
 import { recommendedModels } from '../../lib/llm/models.config';
 import { PROVIDER_NAMES, type ProviderId } from '../../lib/llm/types';
 import { effectiveModel, useModelLists, useSettings } from '../settings/store';
 import { parseReply } from './followups';
-import { Markdown } from './Markdown';
 import { palacePrompt, QUICK_PROMPTS, type QuickPrompt } from './prompts';
 import { SCHOOL_NAME, type School } from './serialize';
 import type { AssistantMessage, UserMessage } from './types';
 import type { Pending, Reading } from './useReading';
+
+// Markdown 套件有回覆要顯示時才載入；載入前先用純文字顯示，內容不會消失。
+const LazyMarkdown = lazy(() => import('./Markdown').then((module) => ({ default: module.Markdown })));
+
+function Markdown({ text }: { text: string }) {
+  return (
+    <Suspense fallback={<div className="reading-prose whitespace-pre-wrap">{text}</div>}>
+      <LazyMarkdown text={text} />
+    </Suspense>
+  );
+}
 
 const smallButton = 'rounded-control border border-line px-3 py-1 font-kai text-[0.9375rem] leading-normal disabled:border-line-soft disabled:text-ink-muted';
 const selectClass = 'min-w-0 rounded-control border border-line bg-bg px-2 py-1 text-[0.9375rem] text-ink';

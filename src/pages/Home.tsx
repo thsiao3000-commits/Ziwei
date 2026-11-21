@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { BirthForm } from '../features/chart/BirthForm';
 import { CentreInfo } from '../features/chart/CentreInfo';
 import { ChartBoard } from '../features/chart/ChartBoard';
-import { computeChart } from '../features/chart/engine';
+import { useEngine } from '../features/chart/engineLoader';
 import { saveChart } from '../features/chart/store';
 import { DEFAULT_CHART_SETTINGS, type BirthInput } from '../features/chart/types';
 import { defaultDensity } from '../features/settings/preferences';
@@ -20,7 +20,9 @@ const DEMO_INPUT: BirthInput = {
 
 export function Home() {
   const navigate = useNavigate();
-  const demo = useMemo(() => computeChart(DEMO_INPUT, DEFAULT_CHART_SETTINGS), []);
+  // 排盤模組在背景載入；載入前先保留示範命盤的位置，版面不會跳動。
+  const engine = useEngine();
+  const demo = useMemo(() => (engine ? engine.computeChart(DEMO_INPUT, DEFAULT_CHART_SETTINGS) : null), [engine]);
   const [selected, setSelected] = useState<number | null>(null);
   const [density] = useState(defaultDensity);
 
@@ -54,14 +56,20 @@ export function Home() {
         <p className="mb-3 text-sm text-ink-muted">
           國曆 2000 年 8 月 16 日寅時出生的女性。點任一宮位，會標出它的三方四正。
         </p>
-        <ChartBoard
-          chart={demo}
-          density={density}
-          selected={selected}
-          onSelect={setSelected}
-          label="示範命盤"
-          centre={<CentreInfo chart={demo} name={DEMO_INPUT.name} />}
-        />
+        {demo ? (
+          <ChartBoard
+            chart={demo}
+            density={density}
+            selected={selected}
+            onSelect={setSelected}
+            label="示範命盤"
+            centre={<CentreInfo chart={demo} name={DEMO_INPUT.name} />}
+          />
+        ) : (
+          <div role="status" className="flex aspect-square w-full items-center justify-center border border-line font-kai text-ink-muted">
+            示範命盤載入中
+          </div>
+        )}
       </section>
     </div>
   );

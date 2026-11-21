@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type FormEvent } from 'react';
-import { computeChart, daysInSolarMonth, hasLeapMonth } from './engine';
+import { daysInSolarMonth } from './calendar';
+import { loadEngine, useEngine } from './engineLoader';
 import { clockMatchesTimeIndex, clockToTimeIndex, TIME_SLOTS, timeSlotLabel } from './time';
 import { useSettings } from '../settings/store';
 import { ChartInputError, MAX_YEAR, MIN_YEAR, type BirthInput } from './types';
@@ -40,9 +41,10 @@ export function BirthForm({ onSubmit }: Props) {
   }, [calendar, yearNumber, monthNumber]);
 
   // 只有該年該月確實有閏月才可勾選。
+  const engine = useEngine();
   const leapAvailable = useMemo(
-    () => calendar === 'lunar' && yearInRange && monthNumber !== null && hasLeapMonth(yearNumber, monthNumber),
-    [calendar, yearInRange, yearNumber, monthNumber],
+    () => calendar === 'lunar' && yearInRange && monthNumber !== null && engine !== null && engine.hasLeapMonth(yearNumber, monthNumber),
+    [calendar, engine, yearInRange, yearNumber, monthNumber],
   );
   const leapChecked = leapAvailable && isLeapMonth;
 
@@ -80,8 +82,8 @@ export function BirthForm({ onSubmit }: Props) {
     };
 
     try {
-      // 先排一次確認日期合法（例如農曆小月沒有三十日）。
-      computeChart(input, useSettings.getState().chartDefaults);
+      // 先排一次確認日期合法（例如農曆小月沒有三十日）。排盤模組還沒載完就等它。
+      (await loadEngine()).computeChart(input, useSettings.getState().chartDefaults);
     } catch (cause) {
       setError(cause instanceof ChartInputError ? cause.message : '排盤時發生錯誤，請確認輸入後再試一次。');
       return;

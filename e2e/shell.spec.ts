@@ -24,11 +24,9 @@ test('空殼可在子路徑下開啟，導覽與重新整理都正常', async ({
   await expect(page.getByText('不能取代醫療、法律或財務專業意見')).toBeVisible();
 
   // 字型自行託管，確認楷體真的載入（而不是落到系統後備字型）。
-  await page.evaluate(() => document.fonts.ready);
-  const kaiLoaded = await page.evaluate(() =>
+  await page.waitForFunction(() =>
     [...document.fonts].some((face) => face.family.includes('LXGW WenKai TC') && face.status === 'loaded'),
   );
-  expect(kaiLoaded).toBe(true);
 
   await page.screenshot({ path: testInfo.outputPath('home.png'), fullPage: true });
 
@@ -75,7 +73,7 @@ test('深色主題（夜觀）可用', async ({ page }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('./');
   await expect(page.getByRole('heading', { level: 1, name: '排出命盤' })).toBeVisible();
-  await page.evaluate(() => document.fonts.ready);
+  await page.waitForFunction(() => [...document.fonts].some((face) => face.status === 'loaded'));
   const background = await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor);
   expect(background).toBe('rgb(20, 33, 61)');
   await page.screenshot({ path: testInfo.outputPath('home-dark.png'), fullPage: true });

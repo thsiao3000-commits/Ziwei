@@ -4,6 +4,7 @@
  * 其他程式只拿這裡輸出的本站型別，不接觸 iztro 的物件。
  */
 import { astro, version as iztroVersion } from 'iztro';
+import { daysInSolarMonth } from './calendar';
 import {
   ChartInputError,
   MAX_YEAR,
@@ -38,16 +39,6 @@ function parseDate(date: string): { year: number; month: number; day: number } {
   const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date);
   if (!match) throw new ChartInputError('invalid_format', '日期格式不正確，請重新選擇年月日。');
   return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
-}
-
-function isLeapYear(year: number): boolean {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
-
-/** 國曆某年某月的天數。 */
-export function daysInSolarMonth(year: number, month: number): number {
-  if (month === 2) return isLeapYear(year) ? 29 : 28;
-  return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
 function isMutagen(value: unknown): value is Mutagen {
@@ -336,3 +327,5 @@ export function computeLimits(input: BirthInput, settings: ChartSettings, select
     },
   };
 }
+
+export { daysInSolarMonth };
