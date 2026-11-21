@@ -28,45 +28,73 @@ test('線上版本沒有比較新時，不出現提示條', async ({ page }) => 
   await expect(page.getByRole('button', { name: '立即更新' })).toHaveCount(0);
 });
 
-test('線上有新版：出現提示條，可以稍後再說', async ({ page }) => {
-  await remoteVersion(page, 'v99.0.0');
-  await page.goto('./');
-  await expect(page.getByText(`有新版 v99.0.0（目前 ${CURRENT}）。更新只會重新載入頁面，命盤、對話與設定不受影響。`)).toBeVisible({ timeout: 10_000 });
-  // 檢查時不走快取，而且只連本站。
-  await page.getByRole('button', { name: '稍後再說' }).click();
-  await expect(page.getByRole('button', { name: '立即更新' })).toHaveCount(0);
-  // 換頁不會再跳出來（同一版不再提示，直到重新開頁）。
-  await page.goto('./#/settings');
-  await expect(page.getByRole('heading', { level: 1, name: '設定' })).toBeVisible();
-  await page.waitForTimeout(500);
-  await expect(page.getByRole('button', { name: '立即更新' })).toHaveCount(0);
-});
+/** 讓版本檢查晚一點回來，測試才有時間先「開始操作」。 */
+async function slowRemoteVersion(page: Page, version: string, delay: number) {
+  await page.route('**/version.json*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ version }) });
+  });
+}
 
-test('立即更新：重新載入；載到的還是舊版時，改用帶版本參數的網址再試一次，不會無限重載', async ({ page }) => {
+test('開頁時線上有新版、還沒開始操作：自動載入最新版，不必按任何東西，也不會無限重載', async ({ page }) => {
   await remoteVersion(page, 'v99.0.0');
-  // 路由自己也會在同一頁內改寫網址，所以用「整頁載入」的次數來判斷有沒有重複重載。
   const navigations: string[] = [];
   let loads = 0;
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame()) navigations.push(frame.url());
   });
   page.on('load', () => (loads += 1));
-  await page.goto('./#/settings');
-  await page.getByRole('button', { name: '立即更新' }).click({ timeout: 10_000 });
 
-  // 先重新載入一次；因為版本還是舊的，再用帶版本參數的網址載一次。
+  await page.goto('./#/settings');
+
+  // 自己重新載入；因為載到的還是舊版，再用帶版本參數的網址試一次。
   await expect.poll(() => navigations.some((url) => url.includes('?v=v99.0.0')), { timeout: 15_000 }).toBe(true);
   await expect(page.getByRole('heading', { level: 1, name: '設定' })).toBeVisible();
-  // 載完後網址上的版本參數會清掉，仍停在原本的頁面。
+  // 停在原本的頁面，網址上的版本參數已清掉。
   await expect(page).toHaveURL(/\/Ziwei\/#\/settings$/);
-  // 測試環境沒有真的新版，提示條會再出現，但不會自己一直重載。
+  // 測試環境沒有真的新版：同一版不會再自動重載，改成提示條。
   await expect(page.getByRole('button', { name: '立即更新' })).toBeVisible({ timeout: 10_000 });
-  // 最多三次整頁載入（開頁、重新載入、帶版本參數再試一次；中間那次可能還沒載完就被換掉），之後不再增加。
   const settled = loads;
   await page.waitForTimeout(1500);
   expect(loads).toBe(settled);
   expect(loads).toBeLessThanOrEqual(3);
+  expect(await page.evaluate(() => sessionStorage.getItem('ziwei:update-auto'))).toBe('v99.0.0');
   expect(await page.evaluate(() => sessionStorage.getItem('ziwei:update-target'))).toBeNull();
+});
+
+test('已經開始操作：不自動重新載入，改用提示條；可以稍後再說', async ({ page }) => {
+  await slowRemoteVersion(page, 'v99.0.0', 1200);
+  let loads = 0;
+  page.on('load', () => (loads += 1));
+  await page.goto('./');
+  // 版本檢查還沒回來，使用者已經開始填表單。
+  await page.getByLabel('稱呼').fill('小明');
+
+  await expect(page.getByText(`有新版 v99.0.0（目前 ${CURRENT}）。更新只會重新載入頁面，命盤、對話與設定不受影響。`)).toBeVisible({ timeout: 10_000 });
+  expect(loads).toBe(1);
+  // 填到一半的內容還在。
+  await expect(page.getByLabel('稱呼')).toHaveValue('小明');
+
+  await page.getByRole('button', { name: '稍後再說' }).click();
+  await expect(page.getByRole('button', { name: '立即更新' })).toHaveCount(0);
+  await page.goto('./#/settings');
+  await expect(page.getByRole('heading', { level: 1, name: '設定' })).toBeVisible();
+  await page.waitForTimeout(500);
+  await expect(page.getByRole('button', { name: '立即更新' })).toHaveCount(0);
+});
+
+test('提示條的「立即更新」：重新載入並刷新快取', async ({ page }) => {
+  await slowRemoteVersion(page, 'v99.0.0', 1200);
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) navigations.push(frame.url());
+  });
+  await page.goto('./#/settings');
+  await page.keyboard.press('Tab');
+  await page.getByRole('button', { name: '立即更新' }).click({ timeout: 10_000 });
+  await expect.poll(() => navigations.some((url) => url.includes('?v=v99.0.0')), { timeout: 15_000 }).toBe(true);
+  await expect(page.getByRole('heading', { level: 1, name: '設定' })).toBeVisible();
+  await expect(page).toHaveURL(/\/Ziwei\/#\/settings$/);
 });
 
 test('電腦版內容靠左，寬螢幕不置中', async ({ page }) => {

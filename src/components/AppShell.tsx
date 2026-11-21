@@ -5,6 +5,7 @@ import { UpdateBanner } from './UpdateBanner';
 const NAV = [
   { to: '/', label: '排盤', end: true },
   { to: '/charts', label: '我的命盤', end: false },
+  { to: '/glossary', label: '名詞', end: false },
   { to: '/settings', label: '設定', end: false },
 ] as const;
 

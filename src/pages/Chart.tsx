@@ -215,6 +215,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
   const detail = (headingId: string) =>
     palace && (
       <PalaceDetail
+        key={palace.index}
         chart={chart}
         palace={palace}
         onClose={() => selectPalace(null)}

@@ -1,22 +1,34 @@
+import { useState } from 'react';
+import { TermButton, TermNote } from '../glossary/TermNote';
 import { Star } from './ChartBoard';
 import { MUTAGENS, type ChartData, type PalaceInfo } from './types';
 
-function StarRow({ title, palace, kind }: { title: string; palace: PalaceInfo; kind: 'majorStars' | 'minorStars' | 'adjectiveStars' }) {
+type Pick = (name: string) => void;
+
+function StarRow({ title, palace, kind, onPick }: { title: string; palace: PalaceInfo; kind: 'majorStars' | 'minorStars' | 'adjectiveStars'; onPick: Pick }) {
   const stars = palace[kind];
   return (
     <div className="grid grid-cols-[6em_1fr] gap-x-3">
       <dt className="text-ink-muted">{title}</dt>
       <dd className="detail-stars flex flex-wrap items-baseline gap-x-3 gap-y-1 font-kai">
-        {stars.length > 0 ? stars.map((star) => <Star key={star.name} star={star} />) : <span className="text-ink-muted">無</span>}
+        {stars.length > 0 ? (
+          stars.map((star) => (
+            <TermButton key={star.name} name={star.name} onPick={onPick}>
+              <Star star={star} />
+            </TermButton>
+          ))
+        ) : (
+          <span className="text-ink-muted">無</span>
+        )}
       </dd>
     </div>
   );
 }
 
-function Row({ title, children }: { title: string; children: React.ReactNode }) {
+function Row({ title, term, onPick, children }: { title: string; term?: string; onPick: Pick; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[6em_1fr] gap-x-3">
-      <dt className="text-ink-muted">{title}</dt>
+      <dt className="text-ink-muted">{term ? <TermButton name={term} onPick={onPick}>{title}</TermButton> : title}</dt>
       <dd>{children}</dd>
     </div>
   );
@@ -49,12 +61,17 @@ export function PalaceDetail({ chart, palace, onClose, headingId, onInterpret }:
     palace.isEmpty ? '空宮' : null,
   ].filter((tag): tag is string => tag !== null);
 
+  // 點了哪個名詞，就地顯示它的說明。
+  const [picked, setPicked] = useState<string | null>(null);
+
   return (
     <div className="text-[0.9375rem] leading-[1.8]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 id={headingId} className="text-[1.5rem]">
-            {palace.name}
+            <TermButton name={palace.name} onPick={setPicked}>
+              {palace.name}
+            </TermButton>
           </h2>
           <p className="font-kai text-ink-muted">
             {palace.stem}
@@ -79,6 +96,9 @@ export function PalaceDetail({ chart, palace, onClose, headingId, onInterpret }:
         </p>
       )}
 
+      <p className="mt-2 text-sm text-ink-muted">有虛線底線的名詞可以點，會在這裡顯示白話說明。</p>
+      {picked && <TermNote name={picked} onClose={() => setPicked(null)} />}
+
       {palace.isEmpty && (
         <p className="mt-3 max-w-[34em] border-l-2 border-line pl-3">
           這一宮沒有主星（空宮）。一般會借對宮{around[0]?.palace?.name}的主星來看：
@@ -87,21 +107,23 @@ export function PalaceDetail({ chart, palace, onClose, headingId, onInterpret }:
       )}
 
       <dl className="mt-4 grid gap-2">
-        <StarRow title="主星" palace={palace} kind="majorStars" />
-        <StarRow title="輔星" palace={palace} kind="minorStars" />
-        <StarRow title="雜曜" palace={palace} kind="adjectiveStars" />
-        <Row title="大限">
+        <StarRow title="主星" palace={palace} kind="majorStars" onPick={setPicked} />
+        <StarRow title="輔星" palace={palace} kind="minorStars" onPick={setPicked} />
+        <StarRow title="雜曜" palace={palace} kind="adjectiveStars" onPick={setPicked} />
+        <Row title="大限" term="大限" onPick={setPicked}>
           {palace.decadalRange[0]}–{palace.decadalRange[1]} 歲
         </Row>
-        <Row title="小限">{palace.ages.join('、')} 歲</Row>
-        <Row title="長生十二神">{palace.changsheng12}</Row>
-        <Row title="博士十二神">{palace.boshi12}</Row>
-        <Row title="歲前與將前">
+        <Row title="小限" term="小限" onPick={setPicked}>{palace.ages.join('、')} 歲</Row>
+        <Row title="長生十二神" term="長生十二神" onPick={setPicked}>{palace.changsheng12}</Row>
+        <Row title="博士十二神" term="博士十二神" onPick={setPicked}>{palace.boshi12}</Row>
+        <Row title="歲前與將前" term="歲前十二神" onPick={setPicked}>
           {palace.suiqian12}、{palace.jiangqian12}
         </Row>
       </dl>
 
-      <h3 className="mt-6 text-[1.125rem]">三方四正</h3>
+      <h3 className="mt-6 text-[1.125rem]">
+        <TermButton name="三方四正" onPick={setPicked} />
+      </h3>
       <ul className="mt-2 grid gap-1">
         {around.map(({ role, palace: other }) => (
           <li key={role} className="grid grid-cols-[6em_1fr] gap-x-3">
@@ -113,7 +135,9 @@ export function PalaceDetail({ chart, palace, onClose, headingId, onInterpret }:
         ))}
       </ul>
 
-      <h3 className="mt-6 text-[1.125rem]">宮干飛化</h3>
+      <h3 className="mt-6 text-[1.125rem]">
+        <TermButton name="宮干飛化" onPick={setPicked} />
+      </h3>
       <p className="mt-1 text-ink-muted">以這一宮的宮干「{palace.stem}」起四化，各飛入：</p>
       <ul className="mt-2 grid gap-1">
         {MUTAGENS.map((mutagen) => {

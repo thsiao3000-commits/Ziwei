@@ -6,6 +6,20 @@ import { APP_VERSION, compareVersions, parseVersionFile } from '../lib/version';
 /** 兩次檢查至少間隔 10 分鐘。 */
 const INTERVAL = 10 * 60 * 1000;
 const TARGET_KEY = 'update-target';
+/** 這個分頁已經自動更新過哪一版（避免載不到新版時一直重載）。 */
+const AUTO_KEY = 'update-auto';
+
+/** 換成線上的最新版：先刷新瀏覽器快取，再重新載入。 */
+async function reloadToVersion(version: string): Promise<void> {
+  writeItem(TARGET_KEY, version, 'session');
+  try {
+    // 先把瀏覽器快取換成新版，重新載入才拿得到。
+    await fetch(window.location.pathname, { cache: 'reload' });
+  } catch {
+    // 換不掉也照樣重新載入；載入後還是舊版的話，會改用帶版本參數的網址再試一次。
+  }
+  window.location.reload();
+}
 
 async function fetchRemoteVersion(): Promise<string | null> {
   // 只連本站，而且不走快取。
@@ -32,7 +46,15 @@ export function retryAfterReload(): boolean {
   return false;
 }
 
-/** 新版偵測提示條：線上的版本比目前載入的新時，出現在頂部列下方。 */
+/**
+ * 一律載入最新版，不受快取影響。
+ *
+ * GitHub Pages 會讓瀏覽器把 index.html 快取 10 分鐘，而且這個標頭改不了；久開的分頁也可能一直是舊的。
+ * 所以每次開頁都不走快取查一次線上的版本：
+ * - 使用者還沒開始操作 → 直接換成新版，不必按任何東西。
+ * - 已經在操作（打字、點選，或 AI 正在回覆）→ 不打斷，改用提示條讓使用者決定。
+ * 切回前景時也會再查，那時一律用提示條。
+ */
 export function UpdateBanner() {
   const [remote, setRemote] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
@@ -42,30 +64,45 @@ export function UpdateBanner() {
 
   useEffect(() => {
     let cancelled = false;
-    async function check() {
+    // 使用者開始操作之後，就不再自動重新載入。
+    let interacted = false;
+    const markInteracted = () => {
+      interacted = true;
+    };
+    const INTERACTIONS = ['pointerdown', 'keydown', 'input'] as const;
+    for (const type of INTERACTIONS) window.addEventListener(type, markInteracted, { once: true, capture: true });
+
+    async function check(atStartup: boolean) {
       if (Date.now() - lastCheck.current < INTERVAL) return;
       lastCheck.current = Date.now();
       try {
         const version = await fetchRemoteVersion();
         if (cancelled || !version || compareVersions(version, APP_VERSION) <= 0 || version === dismissed.current) return;
+        const canAutoUpdate =
+          atStartup && !interacted && !useBusy.getState().streaming && readItem(AUTO_KEY, 'session') !== version;
+        if (canAutoUpdate) {
+          writeItem(AUTO_KEY, version, 'session');
+          await reloadToVersion(version);
+          return;
+        }
         setRemote(version);
       } catch {
         // 離線或抓不到就算了，下次再檢查。
       }
     }
-    // 開頁後稍等再檢查，不搶第一次繪製；切回前景、從往返快取還原時也檢查。
-    const timer = window.setTimeout(() => void check(), 3000);
+    // 開頁就查；切回前景、從往返快取還原時也查。
+    void check(true);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void check();
+      if (document.visibilityState === 'visible') void check(false);
     };
     const onPageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) void check();
+      if (event.persisted) void check(false);
     };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onPageShow);
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      for (const type of INTERACTIONS) window.removeEventListener(type, markInteracted, { capture: true });
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', onPageShow);
     };
@@ -80,14 +117,7 @@ export function UpdateBanner() {
       return;
     }
     setUpdating(true);
-    writeItem(TARGET_KEY, remote, 'session');
-    try {
-      // 先把瀏覽器快取換成新版，重新載入才拿得到。
-      await fetch(window.location.pathname, { cache: 'reload' });
-    } catch {
-      // 換不掉也照樣重新載入；載入後還是舊版的話，會改用帶版本參數的網址再試一次。
-    }
-    window.location.reload();
+    await reloadToVersion(remote);
   }
 
   return (
