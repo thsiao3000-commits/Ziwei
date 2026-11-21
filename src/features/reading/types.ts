@@ -17,6 +17,8 @@ export type AssistantMessage = {
   model: string;
   createdAt: string;
   usage?: Usage;
+  /** 回覆當下依價格表估算的費用（美元）；查無費率時為 null。舊的回覆沒有這個欄位 */
+  costUSD?: number | null;
   /** 回覆沒有完整收完：到達長度上限、使用者按停止，或連線中斷 */
   incomplete?: 'truncated' | 'stopped' | 'interrupted';
   /** 這則回覆以錯誤結束時的說明（已收到的文字仍保留在 content） */

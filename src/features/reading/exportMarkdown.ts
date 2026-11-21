@@ -1,5 +1,6 @@
 import { formatSolarDate } from '../chart/layout';
 import type { ChartData } from '../chart/types';
+import { formatUSD } from '../../lib/llm/pricing';
 import { PROVIDER_NAMES } from '../../lib/llm/types';
 import { APP_VERSION } from '../../lib/version';
 import { parseReply } from './followups';
@@ -59,7 +60,11 @@ export function conversationToMarkdown({ conversation, chart, name, anonymous, e
       lines.push(`_這則回覆沒有寫完（${reason}）。_`, '');
     }
     if (message.error) lines.push(`_這則回覆以錯誤結束：${message.error.message}_`, '');
-    lines.push(`_${PROVIDER_NAMES[message.provider]}　${message.model}_`, '');
+    const usage = message.usage
+      ? `　輸入 ${message.usage.inputTokens.toLocaleString()}、輸出 ${message.usage.outputTokens.toLocaleString()} token`
+      : '';
+    const cost = !message.usage || message.costUSD === undefined ? '' : message.costUSD === null ? '　費率未知' : `　約 ${formatUSD(message.costUSD)}`;
+    lines.push(`_${PROVIDER_NAMES[message.provider]}　${message.model}${usage}${cost}_`, '');
   }
 
   lines.push('---', '', '紫微斗數解讀僅供自我了解與參考，不能取代醫療、法律或財務專業意見。', '', `工具：紫微命盤 ${APP_VERSION}`, '');

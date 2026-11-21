@@ -23,7 +23,8 @@ const conversation: Conversation = {
       provider: 'anthropic',
       model: 'claude-sonnet-5-5',
       createdAt: '',
-      usage: { inputTokens: 10, outputTokens: 5 },
+      usage: { inputTokens: 1234, outputTokens: 321 },
+      costUSD: 0.005678,
     },
     { role: 'user', content: '繼續', createdAt: '' },
     {
@@ -52,7 +53,9 @@ describe('匯出解讀（Markdown）', () => {
   });
 
   it('回覆只含正文與所用模型，不含建議追問區塊與送給模型的補充資料', () => {
-    expect(markdown).toContain('## 解讀\n\n**結論**：官祿宮廉貞天府。\n\n- 依據一\n\n_Claude（Anthropic）　claude-sonnet-5-5_');
+    expect(markdown).toContain(
+      '## 解讀\n\n**結論**：官祿宮廉貞天府。\n\n- 依據一\n\n_Claude（Anthropic）　claude-sonnet-5-5　輸入 1,234、輸出 321 token　約 US$0.0057_',
+    );
     expect(markdown).not.toContain('followups');
     expect(markdown).not.toContain('那財運呢');
     expect(markdown).not.toContain('不該出現在匯出檔');

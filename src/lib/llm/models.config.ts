@@ -80,28 +80,3 @@ export function mergeWithRecommended(provider: ProviderId, listed: readonly List
 export function knownEfforts(provider: ProviderId, modelId: string): readonly Effort[] | null {
   return findRecommended(provider, modelId)?.efforts ?? null;
 }
-
-/**
- * 花費估算用的單價（美元／每百萬 token，輸入與輸出），對照官方價目的日期：2026-11-21。
- * 只用在設定頁的花費統計，而且只是估算：不含快取折扣、長提示詞加價與匯率，
- * 價格變動後也不會自動更新。模型選單上只標級距，不顯示這些數字。
- */
-const PRICES: Record<string, { input: number; output: number }> = {
-  'gpt-6.2-astra': { input: 8, output: 40 },
-  'gpt-6.2-sol': { input: 2, output: 10 },
-  'gpt-6.1-terra': { input: 1, output: 5 },
-  'gpt-6-luna': { input: 0.1, output: 0.5 },
-  'claude-fable-5-2': { input: 8, output: 40 },
-  'claude-opus-5-5': { input: 4, output: 20 },
-  'claude-sonnet-5-5': { input: 2, output: 10 },
-  'claude-haiku-5-5': { input: 0.1, output: 0.5 },
-};
-
-export const PRICES_AS_OF = '2026-11-21';
-
-/** 估算花費（美元）；不認得的模型回傳 null。 */
-export function estimateCost(model: string, inputTokens: number, outputTokens: number): number | null {
-  const price = PRICES[model];
-  if (!price) return null;
-  return (inputTokens * price.input + outputTokens * price.output) / 1_000_000;
-}

@@ -111,7 +111,8 @@ test('提問 → 串流文字 → 點建議追問 → 第二則回覆含前一�
   await expect(reading.locator('[data-reply] b')).toHaveCount(0);
   await expect(reading.getByText('<b>不該被渲染的標籤</b>')).toBeVisible();
   // 每則回覆標示所用模型與用量。
-  await expect(reading.getByText(/Claude（Anthropic）\s+claude-sonnet-5-5\s+輸入 1,234、輸出 321 token/)).toBeVisible();
+  // 每則回覆標示所用模型、用量與估算費用（1,234 × $2 + 321 × $10，每百萬 token）。
+  await expect(reading.getByText(/Claude（Anthropic）\s+claude-sonnet-5-5\s+輸入 1,234、輸出 321 token\s+約 US\$0\.0057/)).toBeVisible();
 
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: testInfo.outputPath('reading.png'), fullPage: true });
@@ -285,4 +286,52 @@ test('解讀文字的行寬上限是 68 個字', async ({ page }) => {
     return { maxWidth: parseFloat(style.maxWidth), fontSize: parseFloat(style.fontSize) };
   });
   expect(Math.round(maxWidth / fontSize)).toBe(68);
+});
+
+test('費用依線上價格表計算（同源的 pricing.json），查無費率時標示費率未知', async ({ page }) => {
+  await setup(page);
+  // 模擬業主的線上價格表：Sonnet 漲價、沒有 Haiku。
+  let pricingRequests = 0;
+  await page.route('**/BenchAI-Support/pricing.json', (route) => {
+    pricingRequests += 1;
+    expect(new URL(route.request().url()).origin).toBe('http://127.0.0.1:4173');
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        schema_version: 1,
+        updated_at: '2027-01-15',
+        models: { 'claude-sonnet-5-5': { name: 'Claude Sonnet 5.5', vendor: 'anthropic', input: 10, output: 100 } },
+      }),
+    });
+  });
+  await castChart(page);
+  const reading = panel(page);
+  await reading.getByRole('button', { name: '命盤總論' }).click();
+  // 1,234 × $10 + 321 × $100，每百萬 token ＝ 0.04444
+  await expect(reading.getByText(/輸入 1,234、輸出 321 token\s+約 US\$0\.044/)).toBeVisible();
+
+  await reading.getByLabel('模型').selectOption('claude-haiku-5-5');
+  await reading.getByRole('button', { name: '財運' }).click();
+  await expect(reading.getByText(/claude-haiku-5-5\s+輸入 1,234、輸出 321 token\s+費率未知/)).toBeVisible();
+  // 價格表只抓一次。
+  expect(pricingRequests).toBe(1);
+
+  await page.goto('./#/settings');
+  await expect(page.getByText('價目表：線上版，更新於 2027-01-15。')).toBeVisible();
+  const usage = page.locator('table').first();
+  await expect(usage).toContainText('約 US$0.044');
+  await expect(usage).toContainText('費率未知');
+  await expect(page.getByText('（不含費率未知的回覆）')).toBeVisible();
+  await expect(page.getByRole('link', { name: '模型價目表（另開分頁）' })).toHaveAttribute('href', '/BenchAI-Support/pricing.html');
+});
+
+test('抓不到線上價格表時用內建的後備表', async ({ page }) => {
+  await setup(page);
+  await castChart(page);
+  const reading = panel(page);
+  await reading.getByRole('button', { name: '命盤總論' }).click();
+  await expect(reading.getByText(/約 US\$0\.0057/)).toBeVisible();
+  await page.goto('./#/settings');
+  await expect(page.getByText(/價目表：抓不到線上版，改用內建的後備表（\d{4}-\d{2}-\d{2}）。/)).toBeVisible();
 });

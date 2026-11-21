@@ -4,6 +4,7 @@ import type { ChartData, SavedChart } from '../chart/types';
 import { isChunkLoadError, isChunkReloadPending, reloadForStaleChunks } from '../../components/UpdateBanner';
 import { useBusy } from '../../lib/busy';
 import { getProvider, ModuleLoadError } from '../../lib/llm';
+import { estimateCostUSD, loadPricing } from '../../lib/llm/pricing';
 import type { ProviderId } from '../../lib/llm/types';
 import { getKey } from '../settings/keys';
 import { effectiveModel, useSettings } from '../settings/store';
@@ -182,8 +183,19 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
           } else if (event.type === 'notice') {
             notice = event.message;
           } else if (event.type === 'done') {
-            if (event.usage) recordUsage(provider, model, event.usage);
-            await finish(message({ ...(event.usage ? { usage: event.usage } : {}), ...(event.truncated ? { incomplete: 'truncated' } : {}) }));
+            let costUSD: number | null | undefined;
+            if (event.usage) {
+              // 費用依回覆當下的價格表估算並存下來，之後價目變動也不會改寫歷史。
+              const { table } = await loadPricing();
+              costUSD = estimateCostUSD(table, model, event.usage.inputTokens, event.usage.outputTokens);
+              recordUsage(provider, model, event.usage, costUSD);
+            }
+            await finish(
+              message({
+                ...(event.usage ? { usage: event.usage, costUSD: costUSD ?? null } : {}),
+                ...(event.truncated ? { incomplete: 'truncated' } : {}),
+              }),
+            );
             return;
           } else {
             // 串流中斷時保留已收到的文字。

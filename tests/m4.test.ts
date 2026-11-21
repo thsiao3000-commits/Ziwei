@@ -6,7 +6,7 @@ import { DEFAULT_CHART_SETTINGS, NO_LIMITS, type BirthInput } from '../src/featu
 import { buildSystemPrompt } from '../src/features/reading/prompts';
 import { serializeChart, serializeLimits } from '../src/features/reading/serialize';
 import { readUsage, recordUsage, usageByMonth } from '../src/features/settings/usage';
-import { estimateCost } from '../src/lib/llm/models.config';
+import { PRICING_FALLBACK } from '../src/lib/llm/pricing';
 import { getDB } from '../src/lib/storage/db';
 
 // 虛構的測試生日（iztro 文件範例）。
@@ -99,29 +99,42 @@ describe('我的命盤', () => {
 });
 
 describe('花費統計', () => {
-  it('依月份與模型累計，只記數量', () => {
+  const table = PRICING_FALLBACK;
+
+  it('依月份與模型累計；費用用回覆當下記下的金額', () => {
     const november = new Date(2026, 10, 21);
-    recordUsage('anthropic', 'claude-sonnet-5-5', { inputTokens: 1000, outputTokens: 500 }, november);
-    recordUsage('anthropic', 'claude-sonnet-5-5', { inputTokens: 2000, outputTokens: 1500 }, november);
-    recordUsage('openai', 'gpt-next-unknown', { inputTokens: 10, outputTokens: 20 }, november);
-    recordUsage('openai', 'gpt-6.2-sol', { inputTokens: 1_000_000, outputTokens: 0 }, new Date(2026, 11, 1));
+    recordUsage('anthropic', 'claude-sonnet-5-5', { inputTokens: 1000, outputTokens: 500 }, 0.007, november);
+    recordUsage('anthropic', 'claude-sonnet-5-5', { inputTokens: 2000, outputTokens: 1500 }, 0.019, november);
+    recordUsage('openai', 'gpt-next-unknown', { inputTokens: 10, outputTokens: 20 }, null, november);
+    recordUsage('openai', 'gpt-6.2-sol', { inputTokens: 1_000_000, outputTokens: 0 }, 4, new Date(2026, 11, 1));
 
     expect(localStorage.getItem('ziwei:usage')).not.toBeNull();
-    const months = usageByMonth(readUsage());
+    const months = usageByMonth(readUsage(), table);
     expect(months.map((month) => month.month)).toEqual(['2026-12', '2026-11']);
-    expect(months[0]?.cost).toBeCloseTo(2, 6);
+    // 這則超過長文門檻，當下記的是加價後的 4 美元；不會被目前的基本費率（2 美元）改寫。
+    expect(months[0]?.cost).toBeCloseTo(4, 6);
 
     const sonnet = months[1]?.rows.find((row) => row.model === 'claude-sonnet-5-5');
     expect(sonnet).toMatchObject({ inputTokens: 3000, outputTokens: 2000, replies: 2 });
-    // 3000 × $2 + 2000 × $10，每百萬 token
     expect(sonnet?.cost).toBeCloseTo(0.026, 6);
+    const unknown = months[1]?.rows.find((row) => row.model === 'gpt-next-unknown');
+    expect(unknown?.cost).toBeNull();
     expect(months[1]?.hasUnknown).toBe(true);
     expect(months[1]?.cost).toBeCloseTo(0.026, 6);
   });
 
-  it('不認得的模型不估價；壞掉的紀錄當成沒有', () => {
-    expect(estimateCost('some-future-model', 1000, 1000)).toBeNull();
-    expect(estimateCost('claude-haiku-5-5', 1_000_000, 1_000_000)).toBeCloseTo(0.6, 6);
+  it('v1.1 以前只記 token 數的舊紀錄，用目前的價格表補估', () => {
+    localStorage.setItem(
+      'ziwei:usage',
+      JSON.stringify([{ month: '2026-11', provider: 'anthropic', model: 'claude-sonnet-5-5', inputTokens: 3000, outputTokens: 2000, replies: 2 }]),
+    );
+    const months = usageByMonth(readUsage(), table);
+    // 3000 × $2 + 2000 × $10，每百萬 token
+    expect(months[0]?.rows[0]?.cost).toBeCloseTo(0.026, 6);
+    expect(months[0]?.hasUnknown).toBe(false);
+  });
+
+  it('壞掉的紀錄當成沒有', () => {
     localStorage.setItem('ziwei:usage', '{broken');
     expect(readUsage()).toEqual([]);
   });

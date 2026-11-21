@@ -1,4 +1,4 @@
-import { estimateCost } from '../../lib/llm/models.config';
+import { estimateCostUSD, type PricingTable } from '../../lib/llm/pricing';
 import type { ProviderId, Usage } from '../../lib/llm/types';
 import { readItem, writeItem } from '../../lib/storage/local';
 
@@ -15,6 +15,10 @@ export type UsageRow = {
   outputTokens: number;
   /** 回覆則數 */
   replies: number;
+  /** 各則回覆當下估算的費用加總（美元） */
+  costUSD?: number;
+  /** 其中有幾則查無費率、沒算進費用 */
+  unpriced?: number;
 };
 
 const STORAGE_KEY = 'usage';
@@ -32,17 +36,19 @@ export function readUsage(): UsageRow[] {
   }
 }
 
-export function recordUsage(provider: ProviderId, model: string, usage: Usage, now: Date = new Date()): void {
+export function recordUsage(provider: ProviderId, model: string, usage: Usage, costUSD?: number | null, now: Date = new Date()): void {
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const rows = readUsage();
   let row = rows.find((item) => item.month === month && item.provider === provider && item.model === model);
   if (!row) {
-    row = { month, provider, model, inputTokens: 0, outputTokens: 0, replies: 0 };
+    row = { month, provider, model, inputTokens: 0, outputTokens: 0, replies: 0, costUSD: 0, unpriced: 0 };
     rows.push(row);
   }
   row.inputTokens += usage.inputTokens;
   row.outputTokens += usage.outputTokens;
   row.replies += 1;
+  if (typeof costUSD === 'number') row.costUSD = (row.costUSD ?? 0) + costUSD;
+  else if (row.costUSD !== undefined) row.unpriced = (row.unpriced ?? 0) + 1;
   writeItem(STORAGE_KEY, JSON.stringify(rows));
 }
 
@@ -55,15 +61,19 @@ export type MonthlyUsage = {
   hasUnknown: boolean;
 };
 
-/** 依月份分組，新的月份在前。 */
-export function usageByMonth(rows: readonly UsageRow[]): MonthlyUsage[] {
+/**
+ * 依月份分組，新的月份在前。
+ * 有記下當時費用的紀錄直接用；較舊、只有 token 數的紀錄用目前的價格表補估。
+ */
+export function usageByMonth(rows: readonly UsageRow[], table: PricingTable): MonthlyUsage[] {
   const months = new Map<string, MonthlyUsage>();
   for (const row of rows) {
-    const cost = estimateCost(row.model, row.inputTokens, row.outputTokens);
+    const recorded = typeof row.costUSD === 'number';
+    const cost = recorded ? (row.costUSD ?? 0) : estimateCostUSD(table, row.model, row.inputTokens, row.outputTokens);
     const group = months.get(row.month) ?? { month: row.month, rows: [], cost: 0, hasUnknown: false };
-    group.rows.push({ ...row, cost });
-    if (cost === null) group.hasUnknown = true;
-    else group.cost += cost;
+    group.rows.push({ ...row, cost: recorded && (row.unpriced ?? 0) >= row.replies ? null : cost });
+    if (cost === null || (row.unpriced ?? 0) > 0) group.hasUnknown = true;
+    if (cost !== null) group.cost += cost;
     months.set(row.month, group);
   }
   return [...months.values()].sort((a, b) => b.month.localeCompare(a.month));

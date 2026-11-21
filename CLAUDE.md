@@ -33,7 +33,7 @@ pnpm preview      # 以 /Ziwei/ 子路徑預覽 dist/
 
 1. **AI 不排盤。** 星曜位置、四化、運限一律由 `features/chart/engine.ts` 計算。不要讓模型推算或修改命盤資料。
 2. **資料留在本機。** 不寫任何伺服器端程式（含 serverless function），不接後端服務。出生資料、稱呼、金鑰不進網址；金鑰不進匯出檔、測試程式與 repo。
-3. **只連兩個主機。** 對外請求只能到 `api.openai.com` 與 `api.anthropic.com`，並用 CSP 強制。不要為了繞過 CORS 加代理；遇到直連被擋，回報業主。
+3. **只連兩個主機。** 對外請求只能到 `api.openai.com` 與 `api.anthropic.com`，並用 CSP 強制。不要為了繞過 CORS 加代理；遇到直連被擋，回報業主。同網域的 `/BenchAI-Support/pricing.json`（業主自己的模型價格表）是同源請求，不算對外；一律用同源路徑去抓，不要寫成完整網址。
 4. **不憑記憶寫 API。** 模型 ID、SDK 版本、請求參數都先對照官方文件或套件型別定義（`HANDOFF.md` 第 13 節）。
 5. **Markdown 不渲染原始 HTML。**
 6. **只有 `engine.ts` 可以 import `iztro`。** 日期用字串傳遞，不經過 `Date`。

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
 import { recommendedModels } from '../../lib/llm/models.config';
+import { formatUSD } from '../../lib/llm/pricing';
 import { PROVIDER_NAMES, type ProviderId } from '../../lib/llm/types';
 import { effectiveModel, useModelLists, useSettings } from '../settings/store';
 import { parseReply } from './followups';
@@ -43,6 +44,12 @@ function UserBubble({ message }: { message: UserMessage }) {
       <p className="whitespace-pre-wrap font-kai text-[1.0625rem]">{message.content}</p>
     </div>
   );
+}
+
+/** 費用標示：回覆當下估算的金額；查無費率標「費率未知」；舊的回覆沒有記費用就不顯示。 */
+function costLabel(costUSD: number | null | undefined): string {
+  if (costUSD === undefined) return '';
+  return costUSD === null ? '　費率未知' : `　約 ${formatUSD(costUSD)}`;
 }
 
 const INCOMPLETE_TEXT: Record<NonNullable<AssistantMessage['incomplete']>, string> = {
@@ -91,6 +98,7 @@ function Reply({ message, isLast, busy, reading }: ReplyProps) {
       <p className="mt-2 text-sm text-ink-muted">
         {PROVIDER_NAMES[message.provider]}　{message.model}
         {message.usage && `　輸入 ${message.usage.inputTokens.toLocaleString()}、輸出 ${message.usage.outputTokens.toLocaleString()} token`}
+        {message.usage && costLabel(message.costUSD)}
       </p>
 
       <div className="mt-2 flex flex-wrap gap-2">

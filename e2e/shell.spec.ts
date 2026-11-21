@@ -18,6 +18,15 @@ test('空殼可在子路徑下開啟，導覽與重新整理都正常', async ({
     if (message.type() === 'error') consoleErrors.push(message.text());
   });
 
+  // 設定頁會抓同網域的模型價格表。正式網域上有這個檔；本機預覽沒有，這裡補一份。
+  await page.route('**/BenchAI-Support/pricing.json', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ schema_version: 1, updated_at: '2026-11-19', models: { 'claude-sonnet-5-5': { input: 2, output: 10 } } }),
+    }),
+  );
+
   await page.goto('./');
   await expect(page.getByRole('heading', { level: 1, name: '排出命盤' })).toBeVisible();
   await expect(page.getByRole('group', { name: '示範命盤' })).toBeVisible();
