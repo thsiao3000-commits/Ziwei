@@ -29,10 +29,12 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
               type="button"
               className="chip"
               aria-pressed={selection.decadal === index}
-              aria-label={`大限 ${item.ageRange[0]} 到 ${item.ageRange[1]} 歲，${item.palaceName}`}
               onClick={() => onChange({ decadal: index, year: null, month: null })}
             >
-              {item.ageRange[0]}–{item.ageRange[1]}
+              <span className="sr-only">{`大限 ${item.ageRange[0]} 到 ${item.ageRange[1]} 歲，${item.palaceName}`}</span>
+              <span aria-hidden="true">
+                {item.ageRange[0]}–{item.ageRange[1]}
+              </span>
             </button>
           ))}
         </div>
@@ -48,13 +50,15 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
                 type="button"
                 className="chip"
                 aria-pressed={selection.year === item.year}
-                aria-label={`流年 ${item.year}，${item.stem}${item.branch}年，虛歲 ${item.age}`}
                 onClick={() =>
                   onChange({ decadal: selection.decadal, year: selection.year === item.year ? null : item.year, month: null })
                 }
               >
-                {item.year} {item.stem}
-                {item.branch}
+                <span className="sr-only">{`流年 ${item.year}，${item.stem}${item.branch}年，虛歲 ${item.age}`}</span>
+                <span aria-hidden="true">
+                  {item.year} {item.stem}
+                  {item.branch}
+                </span>
               </button>
             ))}
           </div>
@@ -71,9 +75,9 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
                 type="button"
                 className="chip"
                 aria-pressed={selection.month === item.index}
-                aria-label={`流月 農曆${item.label}`}
                 onClick={() => onChange({ ...selection, month: selection.month === item.index ? null : item.index })}
               >
+                <span className="sr-only">流月 農曆</span>
                 {item.label}
               </button>
             ))}

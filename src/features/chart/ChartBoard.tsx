@@ -227,7 +227,6 @@ export function ChartBoard({ chart, density, selected, onSelect, centre, animate
                 '--order': settleOrder(chart, palace.index),
               } as CSSProperties
             }
-            aria-label={`${palaceLabel(palace)}${overlayLabel(palace, layers)}`}
             aria-pressed={isSelected}
             tabIndex={palace.index === tabStop ? 0 : -1}
             onClick={() => onSelect(isSelected ? null : palace.index)}
@@ -235,7 +234,11 @@ export function ChartBoard({ chart, density, selected, onSelect, centre, animate
             data-branch={palace.branch}
             data-related={isRelated && selected !== null ? 'true' : undefined}
           >
-            <PalaceContent chart={chart} palace={palace} density={density} layers={layers} />
+            {/* 朗讀名稱用完整的句子；畫面上的縮寫排版對報讀器隱藏，兩者不會重複唸。 */}
+            <span className="sr-only">{`${palaceLabel(palace)}${overlayLabel(palace, layers)}`}</span>
+            <span aria-hidden="true" className="contents">
+              <PalaceContent chart={chart} palace={palace} density={density} layers={layers} />
+            </span>
           </button>
         );
       })}

@@ -510,6 +510,9 @@
 }
 
 .chip {
+  /* 按鈕內給報讀器用的隱藏文字是絕對定位：要以按鈕為基準，才會跟著橫向捲動列被裁掉，
+     不會把整個頁面撐寬。 */
+  position: relative;
   flex: none;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);

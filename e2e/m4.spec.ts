@@ -64,17 +64,17 @@ test('運限切換：大限 → 流年 → 流月，盤上疊宮，提問時帶�
   await limits.getByRole('button', { name: /大限 23 到 32 歲/ }).click();
   await expect(board.locator('.palace-limits')).toHaveCount(12);
   const spouse = board.getByRole('button', { name: /^夫妻，庚辰/ });
-  await expect(spouse).toHaveAttribute('aria-label', /大限命宮/);
+  await expect(spouse).toHaveAccessibleName(/大限命宮/);
   await expect(spouse.locator('.limit-name.is-soul')).toHaveText('限命宮');
   // 庚干：太陽化祿，在子女宮。
-  await expect(board.getByRole('button', { name: /^子女，己卯/ })).toHaveAttribute('aria-label', /大限兄弟，太陽化祿/);
+  await expect(board.getByRole('button', { name: /^子女，己卯/ })).toHaveAccessibleName(/大限兄弟，太陽化祿/);
   await expect(board.getByRole('button', { name: /^子女，己卯/ }).locator('.hua-limit')).toHaveText('限祿');
 
   // 流年 2030 庚戌
   await limits.getByRole('button', { name: /流年 2030/ }).click();
-  await expect(board.getByRole('button', { name: /^官祿，丙戌/ })).toHaveAttribute('aria-label', /流年命宮/);
+  await expect(board.getByRole('button', { name: /^官祿，丙戌/ })).toHaveAccessibleName(/流年命宮/);
   // 流月
-  await limits.getByRole('button', { name: '流月 農曆正月' }).click();
+  await limits.getByRole('button', { name: /^流月 農曆\s*正月$/ }).click();
   await expect(board.locator('.limit-name').filter({ hasText: /^月/ })).toHaveCount(12);
 
   await page.evaluate(() => document.fonts.ready);

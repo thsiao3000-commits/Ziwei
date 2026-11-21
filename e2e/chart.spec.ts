@@ -42,7 +42,7 @@ test('填表單 → 命盤出現 → 點宮位看到三方四正', async ({ page
 
   // 命宮在午，主星紫微（廟）
   const soul = board.getByRole('button', { name: /^命宮，壬午/ });
-  await expect(soul).toHaveAttribute('aria-label', /主星：紫微（廟）/);
+  await expect(soul).toHaveAccessibleName(/主星：紫微（廟）/);
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(1400); // 等落位動畫結束再截圖
   await page.screenshot({ path: testInfo.outputPath('chart.png'), fullPage: true });
@@ -56,7 +56,7 @@ test('填表單 → 命盤出現 → 點宮位看到三方四正', async ({ page
   // 三方四正：本宮、對宮（遷移）、財帛位、官祿位
   const related = board.locator('[data-related="true"]');
   await expect(related).toHaveCount(4);
-  const names = await related.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label')?.split('，')[0]));
+  const names = await related.evaluateAll((nodes) => nodes.map((node) => node.querySelector('.sr-only')?.textContent?.split('，')[0]));
   expect(new Set(names)).toEqual(new Set(['命宮', '遷移', '財帛', '官祿']));
 
   const detail = page.getByRole('heading', { level: 2, name: '命宮' }).locator('visible=true');
