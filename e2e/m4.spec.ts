@@ -91,6 +91,18 @@ test('運限切換：大限 → 流年 → 流月，盤上疊宮，提問時帶�
   expect(sent).toContain('【盤上選中的運限】');
   expect(sent).toContain('流年 2030（虛歲 31）：庚戌');
 
+  // 電腦版：運限列與快捷提問全部看得到，不會被右邊截掉（手機版是橫向捲動）。
+  if ((page.viewportSize()?.width ?? 0) >= 1024) {
+    for (const row of [limits, reading]) {
+      const box = await row.boundingBox();
+      for (const chip of await row.locator('.chip').all()) {
+        const chipBox = await chip.boundingBox();
+        expect(chipBox && box && chipBox.x + chipBox.width <= box.x + box.width + 1, await chip.innerText()).toBe(true);
+      }
+    }
+    await expect(reading.getByRole('button', { name: '今年流年' })).toBeInViewport({ ratio: 1 });
+  }
+
   // 今天 → 目前的大限與流年；本命 → 清掉
   await limits.getByRole('button', { name: '今天' }).click();
   await expect(limits.getByRole('button', { name: /大限 23 到 32 歲/ })).toHaveAttribute('aria-pressed', 'true');

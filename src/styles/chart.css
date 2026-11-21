@@ -535,6 +535,15 @@
   overflow: visible;
 }
 
+/* 電腦上沒有觸控滑動，橫向捲動列看起來像被截掉：改成換行，全部看得到。 */
+@media (min-width: 1024px) {
+  .chip-row {
+    flex-wrap: wrap;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+}
+
 .chip-wrap .chip {
   white-space: normal;
   text-align: left;
