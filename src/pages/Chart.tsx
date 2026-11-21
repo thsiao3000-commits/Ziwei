@@ -340,7 +340,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
         <div
           role="dialog"
           aria-labelledby="palace-detail-sheet"
-          className="palace-sheet fixed inset-x-0 bottom-0 z-20 max-h-[58dvh] overflow-y-auto rounded-t-sheet border-t border-line bg-bg px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 lg:hidden"
+          className="palace-sheet fixed inset-x-0 bottom-0 z-40 max-h-[58dvh] overflow-y-auto rounded-t-sheet border-t border-line bg-bg px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 lg:hidden"
         >
           {detail('palace-detail-sheet')}
         </div>

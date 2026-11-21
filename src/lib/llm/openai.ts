@@ -7,6 +7,8 @@ import {
   type ChatRequest,
   type Effort,
   type FetchLike,
+  type ImageRequest,
+  type ImageResult,
   type LLMProvider,
   type ModelInfo,
   type StreamEvent,
@@ -60,6 +62,40 @@ export function createOpenAIProvider(fetchImpl?: FetchLike): LLMProvider {
         }));
         return mergeWithRecommended('openai', listed);
       } catch (error) {
+        const failure = toFailure(error);
+        const code = classify(failure);
+        throw new LLMError(code, describe('openai', code, failure));
+      }
+    },
+
+    async readImage(apiKey, req: ImageRequest, signal): Promise<ImageResult> {
+      try {
+        const response = await client(apiKey, fetchImpl).responses.create(
+          {
+            model: req.model,
+            instructions: req.system,
+            input: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'input_image', image_url: `data:${req.image.mediaType};base64,${req.image.base64}`, detail: 'high' },
+                  { type: 'input_text', text: req.prompt },
+                ],
+              },
+            ],
+            // 不請 OpenAI 保存這次回覆。
+            store: false,
+          },
+          { signal },
+        );
+        if (response.incomplete_details?.reason === 'content_filter') throw new LLMError('refusal', describe('openai', 'refusal'));
+        const usage = response.usage;
+        return {
+          text: response.output_text,
+          ...(usage ? { usage: { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens } } : {}),
+        };
+      } catch (error) {
+        if (error instanceof LLMError) throw error;
         const failure = toFailure(error);
         const code = classify(failure);
         throw new LLMError(code, describe('openai', code, failure));

@@ -22,7 +22,8 @@ function Markdown({ text }: { text: string }) {
 }
 
 const smallButton = 'rounded-control border border-line px-3 py-1 font-kai text-[0.9375rem] leading-normal disabled:border-line-soft disabled:text-ink-muted';
-const selectClass = 'min-w-0 rounded-control border border-line bg-bg px-2 py-1 text-[0.9375rem] text-ink';
+// 表單欄位一律 16px：iPhone 的 Safari 會在點到字級更小的欄位時自動放大整頁，而且不會縮回去。
+const selectClass = 'min-w-0 rounded-control border border-line bg-bg px-2 py-1 text-base text-ink';
 
 /** 對話太長的門檻（HANDOFF 第 6.5 節）。 */
 const LONG_CONVERSATION = 20;
@@ -481,8 +482,8 @@ export function ReadingPanel({
 
       <div ref={end} />
 
-      {/* 輸入區：手機上固定在底部導覽列上方。 */}
-      <div className="sticky bottom-14 z-10 -mx-4 border-t border-line-soft bg-bg px-4 pb-2 pt-3 lg:static lg:mx-0 lg:border-0 lg:p-0">
+      {/* 輸入區：手機上固定在底部導覽列的正上方（高度含 iPhone 的安全區）。 */}
+      <div className="sticky bottom-[var(--bottom-nav-height)] z-10 -mx-4 border-t border-line-soft bg-bg px-4 pb-3 pt-3 md:bottom-0 lg:static lg:mx-0 lg:border-0 lg:p-0">
         {quote && (
           <button type="button" className={`${smallButton} mb-2`} onMouseDown={(event) => event.preventDefault()} onClick={askAboutQuote}>
             追問這段
@@ -521,14 +522,15 @@ export function ReadingPanel({
             送出提問
           </button>
         </form>
-        <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
-          <span className="hidden lg:inline">Enter 送出，Shift+Enter 換行。</span>
-          送出後，你的提問與{subject}
-          {settings.includeBirthDate ? '（含四柱、稱呼與出生年月日）' : '（含四柱干支，不含稱呼與出生年月日）'}
-          會由瀏覽器直接送給 {PROVIDER_NAMES[provider]}，並依該供應商的政策處理。
-          {hasReply && '追問會重送整段對話，對話越長花費越多。'}
-        </p>
       </div>
+      {/* 送出說明放在固定區外面：一直看得到會佔掉手機大半個畫面，捲到輸入區下方就能讀到。 */}
+      <p className="max-w-[34em] text-sm text-ink-muted">
+        <span className="hidden lg:inline">Enter 送出，Shift+Enter 換行。</span>
+        送出後，你的提問與{subject}
+        {settings.includeBirthDate ? '（含四柱、稱呼與出生年月日）' : '（含四柱干支，不含稱呼與出生年月日）'}
+        會由瀏覽器直接送給 {PROVIDER_NAMES[provider]}，並依該供應商的政策處理。
+        {hasReply && '追問會重送整段對話，對話越長花費越多。'}
+      </p>
     </div>
   );
 }

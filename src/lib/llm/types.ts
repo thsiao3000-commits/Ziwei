@@ -64,8 +64,20 @@ export type ModelInfo = {
 /** 可替換的 fetch，測試時用來餵模擬回應。 */
 export type FetchLike = typeof fetch;
 
+/** 讀圖請求：一張圖加一段指示，回一段文字（不串流）。 */
+export type ImageRequest = {
+  model: string;
+  system: string;
+  prompt: string;
+  image: { mediaType: 'image/jpeg' | 'image/png'; base64: string };
+};
+
+export type ImageResult = { text: string; usage?: Usage };
+
 export interface LLMProvider {
   listModels(apiKey: string): Promise<ModelInfo[]>;
+  /** 讀一張圖並回覆文字。失敗時丟出 LLMError。 */
+  readImage(apiKey: string, req: ImageRequest, signal: AbortSignal): Promise<ImageResult>;
   streamChat(apiKey: string, req: ChatRequest, signal: AbortSignal): AsyncIterable<StreamEvent>;
 }
 

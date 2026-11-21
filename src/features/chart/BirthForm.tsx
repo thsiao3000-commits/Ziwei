@@ -2,12 +2,15 @@ import { useId, useMemo, useState, type FormEvent } from 'react';
 import { daysInSolarMonth } from './calendar';
 import { loadEngine, useEngine } from './engineLoader';
 import { clockMatchesTimeIndex, clockToTimeIndex, TIME_SLOTS, timeSlotLabel } from './time';
+import type { BirthDraft } from '../import/extract';
 import { useSettings } from '../settings/store';
 import { ChartInputError, MAX_YEAR, MIN_YEAR, type BirthInput } from './types';
 
 type Props = {
   /** 輸入通過檢核、可以排盤時呼叫 */
   onSubmit: (input: BirthInput) => Promise<void> | void;
+  /** 表單的起始值（例如從截圖讀到的資料）。要換一組起始值時，用 key 讓表單重建 */
+  initial?: BirthDraft;
 };
 
 const fieldClass =
@@ -16,17 +19,17 @@ const labelClass = 'block font-kai text-[1.0625rem] font-bold';
 const choiceClass =
   'flex cursor-pointer items-center gap-2 rounded-control border border-line px-4 py-2 has-[:checked]:bg-accent has-[:checked]:text-accent-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus';
 
-export function BirthForm({ onSubmit }: Props) {
+export function BirthForm({ onSubmit, initial = {} }: Props) {
   const id = useId();
-  const [name, setName] = useState('我');
-  const [gender, setGender] = useState<BirthInput['gender'] | ''>('');
-  const [calendar, setCalendar] = useState<BirthInput['calendar']>('solar');
-  const [year, setYear] = useState('');
-  const [month, setMonth] = useState('');
-  const [day, setDay] = useState('');
-  const [isLeapMonth, setIsLeapMonth] = useState(false);
-  const [clock, setClock] = useState('');
-  const [timeIndex, setTimeIndex] = useState<number | ''>('');
+  const [name, setName] = useState(initial.name ?? '我');
+  const [gender, setGender] = useState<BirthInput['gender'] | ''>(initial.gender ?? '');
+  const [calendar, setCalendar] = useState<BirthInput['calendar']>(initial.calendar ?? 'solar');
+  const [year, setYear] = useState(initial.year ?? '');
+  const [month, setMonth] = useState(initial.month ?? '');
+  const [day, setDay] = useState(initial.day ?? '');
+  const [isLeapMonth, setIsLeapMonth] = useState(initial.isLeapMonth ?? false);
+  const [clock, setClock] = useState(initial.clock ?? '');
+  const [timeIndex, setTimeIndex] = useState<number | ''>(initial.timeIndex ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { BirthForm } from '../features/chart/BirthForm';
 import { CentreInfo } from '../features/chart/CentreInfo';
 import { ChartBoard } from '../features/chart/ChartBoard';
@@ -44,7 +44,12 @@ export function Home() {
         <div className="mt-6">
           <BirthForm onSubmit={handleSubmit} />
         </div>
-        <p className="mt-6 max-w-[34em] text-sm text-ink-muted">
+        <p className="mt-6 max-w-[34em] text-sm">
+          <Link to="/import" className="text-accent underline underline-offset-4">
+            已經有命盤截圖？請 AI 讀出出生資料帶入表單
+          </Link>
+        </p>
+        <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
           不確定出生時辰也可以先選最可能的一個：排盤後，命盤頁有「比較相鄰時辰的命盤」可以對照。
         </p>
         <p className="mt-2 max-w-[34em] text-sm text-ink-muted">

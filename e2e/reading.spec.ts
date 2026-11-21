@@ -335,3 +335,31 @@ test('抓不到線上價格表時用內建的後備表', async ({ page }) => {
   await page.goto('./#/settings');
   await expect(page.getByText(/價目表：抓不到線上版，改用內建的後備表（\d{4}-\d{2}-\d{2}）。/)).toBeVisible();
 });
+
+test('手機：輸入區不蓋到底部導覽列；表單欄位不小於 16px（iPhone 才不會自動放大頁面）', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 768, '只檢查手機版');
+  await setup(page);
+  await castChart(page);
+  const reading = panel(page);
+  await reading.getByRole('button', { name: '命盤總論' }).click();
+  await expect(reading.getByText('命宮紫微坐守，格局穩重。')).toBeVisible();
+
+  // 捲到對話中段：輸入區會固定在畫面底部、導覽列的正上方。
+  await reading.getByLabel('對話內容').scrollIntoViewIfNeeded();
+  const input = reading.getByRole('textbox', { name: '提問', exact: true });
+  const nav = page.getByRole('navigation', { name: '主要導覽' }).locator('visible=true');
+  const composer = await input.locator('xpath=ancestor::div[contains(@class,"sticky")][1]').boundingBox();
+  const navBox = await nav.boundingBox();
+  expect(composer && navBox).toBeTruthy();
+  expect(composer!.y + composer!.height, '輸入區的下緣不可超過導覽列的上緣').toBeLessThanOrEqual(navBox!.y + 0.5);
+  // 導覽列的文字完整露出來。
+  await expect(nav.getByRole('link', { name: '我的命盤' })).toBeInViewport({ ratio: 1 });
+
+  const small = await page.evaluate(() =>
+    [...document.querySelectorAll('select, textarea, input:not([type=radio]):not([type=checkbox]):not([type=file])')]
+      .filter((element) => (element as HTMLElement).offsetParent !== null)
+      .map((element) => ({ name: element.id || element.tagName, size: parseFloat(getComputedStyle(element).fontSize) }))
+      .filter((item) => item.size < 16),
+  );
+  expect(small, '這些欄位的字級小於 16px').toEqual([]);
+});

@@ -6,6 +6,8 @@ import {
   type ChatRequest,
   type Effort,
   type FetchLike,
+  type ImageRequest,
+  type ImageResult,
   type LLMProvider,
   type ModelInfo,
   type StreamEvent,
@@ -64,6 +66,44 @@ export function createAnthropicProvider(fetchImpl?: FetchLike): LLMProvider {
         }
         return mergeWithRecommended('anthropic', listed);
       } catch (error) {
+        const failure = toFailure(error);
+        const code = classify(failure);
+        throw new LLMError(code, describe('anthropic', code, failure));
+      }
+    },
+
+    async readImage(apiKey, req: ImageRequest, signal): Promise<ImageResult> {
+      try {
+        const message = await client(apiKey, fetchImpl).messages.create(
+          {
+            model: req.model,
+            // 思考的 token 也算在裡面；讀出生資料的回覆很短，這個上限綽綽有餘。
+            max_tokens: 8000,
+            system: req.system,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'image', source: { type: 'base64', media_type: req.image.mediaType, data: req.image.base64 } },
+                  { type: 'text', text: req.prompt },
+                ],
+              },
+            ],
+          },
+          { signal },
+        );
+        if (message.stop_reason === 'refusal') throw new LLMError('refusal', describe('anthropic', 'refusal'));
+        const text = message.content.map((block) => (block.type === 'text' ? block.text : '')).join('');
+        return {
+          text,
+          usage: {
+            inputTokens:
+              message.usage.input_tokens + (message.usage.cache_creation_input_tokens ?? 0) + (message.usage.cache_read_input_tokens ?? 0),
+            outputTokens: message.usage.output_tokens,
+          },
+        };
+      } catch (error) {
+        if (error instanceof LLMError) throw error;
         const failure = toFailure(error);
         const code = classify(failure);
         throw new LLMError(code, describe('anthropic', code, failure));

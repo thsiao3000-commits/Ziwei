@@ -25,6 +25,9 @@
 
   /* 內文行長 30–36 個中文字 */
   --measure: 34em;
+
+  /* 手機底部導覽列的高度（含 iPhone 底部的安全區）。固定在它上方的元素都用這個值，才不會互相蓋住。 */
+  --bottom-nav-height: calc(3rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* 青花（淺色） */

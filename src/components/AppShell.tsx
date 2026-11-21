@@ -51,7 +51,7 @@ export function AppShell() {
         <Outlet />
       </main>
 
-      <footer className="w-full max-w-[1800px] px-4 pb-24 pt-6 text-sm text-ink-muted md:px-5 md:pb-8">
+      <footer className="w-full max-w-[1800px] px-4 pb-[calc(var(--bottom-nav-height)+1.5rem)] pt-6 text-sm text-ink-muted md:px-5 md:pb-8">
         <p className="max-w-[34em]">
           紫微斗數解讀僅供自我了解與參考，不能取代醫療、法律或財務專業意見。
         </p>
@@ -61,7 +61,7 @@ export function AppShell() {
       {/* 手機用底部導覽列 */}
       <nav
         aria-label="主要導覽"
-        className="fixed inset-x-0 bottom-0 flex border-t border-line bg-bg pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex h-[var(--bottom-nav-height)] items-stretch border-t border-line bg-bg pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {NAV.map((item) => (
           <NavLink
@@ -69,7 +69,7 @@ export function AppShell() {
             to={item.to}
             end={item.end}
             className={({ isActive }) =>
-              `font-kai flex-1 py-3 text-center text-base leading-none ${
+              `font-kai flex flex-1 items-center justify-center text-center text-base leading-none ${
                 isActive ? 'text-ink underline decoration-line decoration-2 underline-offset-[0.5em]' : 'text-ink-muted'
               }`
             }
