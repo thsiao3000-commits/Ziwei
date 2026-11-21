@@ -1,0 +1,370 @@
+/*
+ * 命盤。格線本身就是結構：格線零圓角、沒有陰影，其他介面元件才有圓角。
+ * 命盤內所有文字用楷體。
+ */
+
+/* 容器查詢以這個外框的寬度為準（命盤自己不能查自己的寬度）。 */
+.chart-frame {
+  container-type: inline-size;
+  width: 100%;
+}
+
+.chart-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  aspect-ratio: 1;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  font-family: var(--font-kai);
+  color: var(--ink);
+}
+
+/* 完整密度的內容比正方形格子多，讓命盤往下長，不擠壓字級。 */
+.chart-board.density-full {
+  aspect-ratio: auto;
+  grid-template-rows: repeat(4, minmax(25cqw, auto));
+}
+
+.palace {
+  position: relative;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.palace:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+.palace.is-selected {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.has-selection .palace.is-related:not(.is-selected) {
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
+/* 選了宮位後，三方四正以外的宮位退後。 */
+.has-selection .palace:not(.is-related) .palace-content {
+  opacity: 0.55;
+}
+
+.palace-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  padding: 4px 4px 3px;
+}
+
+.palace-stars {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 1px 6px;
+}
+
+.star {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+
+/* 手機精簡密度下主星不小於 13px（HANDOFF 第 8.7 節）。 */
+.star-major {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.star-minor {
+  font-size: 0.75rem;
+}
+
+.star-adjective {
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+}
+
+.star-brightness {
+  margin-left: 1px;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+
+.palace-empty {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.palace-gods {
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  color: var(--ink-muted);
+}
+
+/* 窄螢幕：大限獨立一行、宮干省略只留地支，宮名才放得下。 */
+.palace-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 2px;
+  line-height: 1.25;
+}
+
+.palace-decadal {
+  order: -1;
+  flex-basis: 100%;
+}
+
+.palace-stem {
+  display: none;
+}
+
+.palace-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.palace-body {
+  margin-left: 2px;
+  padding: 0 2px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 0.625rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.palace-decadal,
+.palace-branch {
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* 四化標記：帶字的小印 */
+.hua {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 1.25em;
+  height: 1.25em;
+  margin-left: 2px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hua-lu {
+  background: var(--hua-lu-bg);
+  color: var(--hua-lu-ink);
+}
+
+.hua-quan {
+  background: var(--hua-quan);
+  color: var(--bg);
+}
+
+.hua-ke {
+  background: var(--hua-ke);
+  color: var(--bg);
+}
+
+.hua-ji {
+  background: var(--hua-ji);
+  color: var(--bg);
+}
+
+.chart-centre {
+  grid-row: 2 / span 2;
+  grid-column: 2 / span 2;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 6px 8px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.chart-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.chart-lines polygon,
+.chart-lines line {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-opacity: 0.3;
+  vector-effect: non-scaling-stroke;
+}
+
+.has-selection .chart-lines polygon,
+.has-selection .chart-lines line {
+  stroke-opacity: 0.6;
+}
+
+/* 宮位詳情裡的星曜不在命盤的容器內，字級另外給。 */
+.detail-stars .star-major {
+  font-size: 1.125rem;
+}
+
+.detail-stars .star-minor {
+  font-size: 1rem;
+}
+
+.detail-stars .star-adjective {
+  font-size: 0.9375rem;
+}
+
+.detail-stars .star-brightness,
+.detail-stars .hua {
+  font-size: 0.8125rem;
+}
+
+@container (min-width: 520px) {
+  .palace-content {
+    gap: 4px;
+    padding: 8px 8px 6px;
+  }
+
+  .palace-stars {
+    gap: 2px 10px;
+  }
+
+  .star-major {
+    font-size: 1.0625rem;
+  }
+
+  .star-minor {
+    font-size: 0.875rem;
+  }
+
+  .star-adjective,
+  .star-brightness,
+  .palace-gods,
+  .palace-decadal,
+  .palace-branch,
+  .hua {
+    font-size: 0.75rem;
+  }
+
+  .palace-name {
+    font-size: 1rem;
+  }
+
+  .palace-foot {
+    flex-wrap: nowrap;
+  }
+
+  .palace-decadal {
+    order: 0;
+    flex-basis: auto;
+  }
+
+  .palace-stem {
+    display: inline;
+  }
+
+  .palace-body {
+    font-size: 0.6875rem;
+  }
+
+  .chart-centre {
+    padding: 16px 20px;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+  }
+}
+
+/*
+ * 全站唯一主動的動態：命盤第一次排出時，格線展開、星曜從命宮依序落位，
+ * 最後畫出命宮的三方四正連線，全程約 1.2 秒。
+ */
+.chart-animate {
+  animation: board-open 300ms ease-out both;
+}
+
+.chart-animate .palace-content {
+  animation: star-settle 260ms ease-out both;
+  animation-delay: calc(240ms + var(--order) * 45ms);
+}
+
+.chart-animate .chart-centre {
+  animation: star-settle 260ms ease-out both;
+  animation-delay: 240ms;
+}
+
+.chart-animate .chart-lines {
+  animation: line-draw 260ms ease-out both;
+  animation-delay: 940ms;
+}
+
+@keyframes board-open {
+  from {
+    clip-path: inset(50%);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes star-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes line-draw {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-animate,
+  .chart-animate .palace-content,
+  .chart-animate .chart-centre,
+  .chart-animate .chart-lines {
+    animation: none;
+  }
+}

@@ -163,10 +163,17 @@ export function computeChart(input: BirthInput, settings: ChartSettings): ChartD
     }
   }
 
+  const smallMonth = new ChartInputError(
+    'invalid_lunar_date',
+    `農曆 ${year} 年${wantsLeap ? '閏' : ''} ${month} 月沒有 ${day} 日（這個月是小月，只有 29 天）。`,
+  );
+
   let astrolabe: Astrolabe;
   try {
     astrolabe = build(input, settings, wantsLeap);
   } catch {
+    // 農曆小月的三十日會被 iztro 擋下。
+    if (input.calendar === 'lunar' && day === 30) throw smallMonth;
     throw new ChartInputError(
       input.calendar === 'solar' ? 'invalid_solar_date' : 'invalid_lunar_date',
       '這個日期無法排盤，請確認年月日是否正確。',
@@ -181,13 +188,10 @@ export function computeChart(input: BirthInput, settings: ChartSettings): ChartD
       : astrolabe;
 
   if (input.calendar === 'lunar') {
-    // 農曆小月只有 29 天。iztro 不會擋下不存在的三十日，這裡用換算回來的農曆日期核對。
+    // 再用換算回來的農曆日期核對一次，確保排出的就是使用者輸入的那一天。
     const lunar = calendarDay.rawDates.lunarDate;
     if (lunar.lunarYear !== year || lunar.lunarMonth !== month || lunar.lunarDay !== day || lunar.isLeap !== wantsLeap) {
-      throw new ChartInputError(
-        'invalid_lunar_date',
-        `農曆 ${year} 年${wantsLeap ? '閏' : ''} ${month} 月沒有 ${day} 日（這個月是小月）。`,
-      );
+      throw smallMonth;
     }
   }
 

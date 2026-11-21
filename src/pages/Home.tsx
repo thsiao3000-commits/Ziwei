@@ -1,28 +1,67 @@
-import { BranchGrid } from '../components/BranchGrid';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { BirthForm } from '../features/chart/BirthForm';
+import { CentreInfo } from '../features/chart/CentreInfo';
+import { ChartBoard } from '../features/chart/ChartBoard';
+import { computeChart } from '../features/chart/engine';
+import { saveChart } from '../features/chart/store';
+import { DEFAULT_CHART_SETTINGS, type BirthInput } from '../features/chart/types';
+import { defaultDensity } from '../features/settings/preferences';
+
+/** 示範命盤用的是 iztro 文件裡的範例生日，不是任何人的真實資料。 */
+const DEMO_INPUT: BirthInput = {
+  name: '示範',
+  gender: 'female',
+  calendar: 'solar',
+  date: '2000-8-16',
+  timeIndex: 2,
+};
 
 export function Home() {
+  const navigate = useNavigate();
+  const demo = useMemo(() => computeChart(DEMO_INPUT, DEFAULT_CHART_SETTINGS), []);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [density] = useState(defaultDensity);
+
+  async function handleSubmit(input: BirthInput) {
+    const saved = await saveChart(input, DEFAULT_CHART_SETTINGS);
+    // 出生資料不進網址：只帶本機隨機 id。
+    await navigate(`/chart/${saved.id}`, { state: { fresh: true } });
+  }
+
   return (
-    <div className="grid gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-12">
+    <div className="grid gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-12">
       <section aria-labelledby="home-title">
         <h1 id="home-title" className="text-[1.75rem] md:text-[2.25rem]">
           排出命盤
         </h1>
-        <p className="mt-4 max-w-[34em]">
-          輸入出生的年月日與時辰，排出紫微斗數命盤。星曜位置、四化與運限都由排盤程式計算，AI
-          只負責依這張盤回答問題。
+        <p className="mt-3 max-w-[34em]">
+          輸入出生的年月日與時辰。星曜位置、四化與大限都由排盤程式計算。
         </p>
-        <p className="mt-4 max-w-[34em] border-l-2 border-line pl-4">
-          網站建置中：排盤表單尚未開放，目前只有版面。
-        </p>
-        <p className="mt-4 max-w-[34em] text-ink-muted">
-          資料只存在這台裝置。提問時，命盤內容會由你的瀏覽器直接送給你選的 AI
-          供應商，並依該供應商的政策處理。
+        <div className="mt-6">
+          <BirthForm onSubmit={handleSubmit} />
+        </div>
+        <p className="mt-6 max-w-[34em] text-sm text-ink-muted">
+          出生資料只存在這台裝置的瀏覽器，本站沒有伺服器會收到它。
         </p>
       </section>
 
-      <div className="mx-auto w-full max-w-[560px]">
-        <BranchGrid centre="排盤後，命盤會顯示在這裡" />
-      </div>
+      <section aria-labelledby="demo-title" className="mx-auto w-full max-w-[620px]">
+        <h2 id="demo-title" className="text-[1.125rem]">
+          示範命盤
+        </h2>
+        <p className="mb-3 text-sm text-ink-muted">
+          國曆 2000 年 8 月 16 日寅時出生的女性。點任一宮位，會標出它的三方四正。
+        </p>
+        <ChartBoard
+          chart={demo}
+          density={density}
+          selected={selected}
+          onSelect={setSelected}
+          label="示範命盤"
+          centre={<CentreInfo chart={demo} name={DEMO_INPUT.name} />}
+        />
+      </section>
     </div>
   );
 }

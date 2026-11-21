@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './tokens.css';
+@import './chart.css';
 
 /* 把語意 token 接到 Tailwind：bg-bg、text-ink、border-line、font-kai … */
 @theme inline {

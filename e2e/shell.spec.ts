@@ -20,7 +20,7 @@ test('空殼可在子路徑下開啟，導覽與重新整理都正常', async ({
 
   await page.goto('./');
   await expect(page.getByRole('heading', { level: 1, name: '排出命盤' })).toBeVisible();
-  await expect(page.getByRole('img', { name: /命盤格線/ })).toBeVisible();
+  await expect(page.getByRole('group', { name: '示範命盤' })).toBeVisible();
   await expect(page.getByText('不能取代醫療、法律或財務專業意見')).toBeVisible();
 
   // 字型自行託管，確認楷體真的載入（而不是落到系統後備字型）。

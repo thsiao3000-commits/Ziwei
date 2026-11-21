@@ -13,6 +13,8 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // 介面文案用全形空白分隔詞組，字串與 JSX 文字裡允許。
+      'no-irregular-whitespace': ['error', { skipStrings: true, skipTemplates: true, skipJSXText: true }],
       // CLAUDE.md 規則 6：只有 engine.ts 可以 import iztro。
       'no-restricted-imports': [
         'error',
