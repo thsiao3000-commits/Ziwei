@@ -14,6 +14,8 @@ export type MarkdownOptions = {
   anonymous: boolean;
   /** 匯出時間，YYYY-M-D */
   exportedOn: string;
+  /** 換掉開頭的命盤摘要（合盤時列出兩張盤） */
+  facts?: readonly string[];
 };
 
 /** 使用者輸入的文字放進 Markdown 時，避免被當成標題或清單。 */
@@ -28,7 +30,7 @@ function quote(text: string): string {
  * 把一段對話轉成 Markdown。只含提問、帶入了哪些資料的標籤、回覆正文與所用模型；
  * 不含建議追問區塊、API 金鑰，也不含送給模型的完整命盤資料。
  */
-export function conversationToMarkdown({ conversation, chart, name, anonymous, exportedOn }: MarkdownOptions): string {
+export function conversationToMarkdown({ conversation, chart, name, anonymous, exportedOn, facts: override }: MarkdownOptions): string {
   const gender = chart.gender === 'male' ? '男' : '女';
   const lines: string[] = [`# ${conversation.title}`, ''];
 
@@ -44,7 +46,7 @@ export function conversationToMarkdown({ conversation, chart, name, anonymous, e
         `命主 ${chart.soul}`,
         `身主 ${chart.body}`,
       ];
-  lines.push(`**命盤**：${facts.join('｜')}`, '', `匯出日期：${exportedOn}`, '', '---', '');
+  lines.push(`**命盤**：${(override ?? facts).join('｜')}`, '', `匯出日期：${exportedOn}`, '', '---', '');
 
   for (const message of conversation.messages) {
     if (message.role === 'user') {

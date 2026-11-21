@@ -169,6 +169,12 @@ type Props = {
   onPerspectiveChange: (school: School) => void;
   /** 盤上選中的運限，下一則提問會帶入；沒有時為 null */
   attachedLimits: string | null;
+  /** 換掉預設的快捷提問（合盤用） */
+  quickPrompts?: readonly QuickPrompt[];
+  /** 面板標題，預設「解讀」 */
+  title?: string;
+  /** 送出說明裡「命盤內容」的說法，預設是單一命盤 */
+  subject?: string;
 };
 
 const PERSPECTIVES: readonly School[] = ['sanhe', 'feixing', 'panel', 'custom'];
@@ -184,6 +190,9 @@ export function ReadingPanel({
   perspective,
   onPerspectiveChange,
   attachedLimits,
+  quickPrompts,
+  title = '解讀',
+  subject = '命盤內容',
 }: Props) {
   const id = useId();
   const settings = useSettings();
@@ -225,7 +234,7 @@ export function ReadingPanel({
     return (
       <div className="max-w-[34em]">
         <h2 id={headingId} className="text-[1.5rem]">
-          解讀
+          {title}
         </h2>
         <p className="mt-3">要請 AI 依這張盤回答問題，需要先設定你自己的 OpenAI 或 Claude API 金鑰。命盤本身不需要金鑰就能完整使用。</p>
         <p className="mt-3">
@@ -267,14 +276,14 @@ export function ReadingPanel({
     textarea.current?.focus();
   }
 
-  const quicks: QuickPrompt[] = [...(selectedPalaceName ? [palacePrompt(selectedPalaceName)] : []), ...QUICK_PROMPTS];
+  const quicks: QuickPrompt[] = quickPrompts ? [...quickPrompts] : [...(selectedPalaceName ? [palacePrompt(selectedPalaceName)] : []), ...QUICK_PROMPTS];
   const hasReply = messages.some((message) => message.role === 'assistant');
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 id={headingId} className="text-[1.5rem]">
-          解讀
+          {title}
         </h2>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <label htmlFor={`${id}-provider`} className="sr-only">
@@ -514,7 +523,7 @@ export function ReadingPanel({
         </form>
         <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
           <span className="hidden lg:inline">Enter 送出，Shift+Enter 換行。</span>
-          送出後，你的提問與命盤內容
+          送出後，你的提問與{subject}
           {settings.includeBirthDate ? '（含四柱、稱呼與出生年月日）' : '（含四柱干支，不含稱呼與出生年月日）'}
           會由瀏覽器直接送給 {PROVIDER_NAMES[provider]}，並依該供應商的政策處理。
           {hasReply && '追問會重送整段對話，對話越長花費越多。'}

@@ -19,6 +19,8 @@ export type PromptInput = {
   /** YYYY-M-D */
   today: string;
   chartContext: string;
+  /** 額外的規則段落（例如合盤），放在命盤資料之前 */
+  extraRules?: string;
 };
 
 function perspectiveLine(school: School, custom: string): string {
@@ -35,7 +37,7 @@ function perspectiveLine(school: School, custom: string): string {
   return `${base}遇到流派說法不同時，說明差異，不要假裝只有一種解釋。`;
 }
 
-export function buildSystemPrompt({ school, verbosity, customPerspective = '', today, chartContext }: PromptInput): string {
+export function buildSystemPrompt({ school, verbosity, customPerspective = '', today, chartContext, extraRules = '' }: PromptInput): string {
   return `你是一位熟悉紫微斗數的解盤助手，使用臺灣慣用的繁體中文與術語。
 
 【資料】下方「命盤資料」由排盤程式計算，是唯一依據。不要自行重排、增刪或移動星曜；資料裡沒有的內容，直接說明無法判斷。使用者訊息裡的「補充資料」同樣由排盤程式產生，可以引用。
@@ -45,7 +47,7 @@ ${perspectiveLine(school, customPerspective)}
 【界線】健康、壽命、懷孕、法律、投資等問題：只談命盤顯示的傾向與可留意之處，並提醒尋求專業意見；不預言死亡、重病或災禍的具體時間。命盤資料沒有八字的十神、大運等內容；被問到八字時，只就資料裡有的部分回答，並說明這裡沒有排八字。
 【形式】先用兩三句給結論，再分點說明依據，最後給可行的建議。詳細度：${VERBOSITY_TEXT[verbosity]}。使用 Markdown，不輸出 HTML。
 【追問】正文結束後另起一段，用 <followups> 與 </followups> 包住 2–3 個使用者可能接著想問的問題，每行一個。問題要具體，並且和這張盤、這段對話有關。
-【今天】${today}
+${extraRules ? `${extraRules}\n` : ''}【今天】${today}
 
 命盤資料：
 ${chartContext}`;

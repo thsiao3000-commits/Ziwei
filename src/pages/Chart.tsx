@@ -237,6 +237,9 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
           <Link to={`/rectify/${saved.id}`} className="text-accent underline underline-offset-4">
             不確定出生時辰？比較相鄰時辰的命盤
           </Link>
+          <Link to={`/compare/${saved.id}`} className="ml-4 text-accent underline underline-offset-4">
+            和另一張命盤合盤
+          </Link>
         </p>
         <div className="w-full max-w-[820px]">
           <ChartBoard

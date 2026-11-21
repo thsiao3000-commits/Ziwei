@@ -67,10 +67,15 @@ export async function listCharts(): Promise<SavedChart[]> {
   return charts.sort((a, b) => Number(b.pinned === true) - Number(a.pinned === true) || recent(b).localeCompare(recent(a)));
 }
 
-/** 刪除命盤與它的所有對話。 */
+/** 刪除命盤與它的所有對話（含用到這張盤的合盤對話）。 */
 export async function deleteChart(id: string): Promise<void> {
   const db = await getDB();
-  const keys = await db.getAllKeysFromIndex('conversations', 'chartId', id);
+  const own = await db.getAllKeysFromIndex('conversations', 'chartId', id);
+  // 合盤對話的索引鍵是「compare:甲:乙」，其中一張盤刪掉了就沒有意義。
+  const compared = (await db.getAll('conversations'))
+    .filter((item) => item.chartId.startsWith('compare:') && item.chartId.split(':').includes(id))
+    .map((item) => item.id);
+  const keys = [...new Set([...own, ...compared])];
   const tx = db.transaction(['charts', 'conversations'], 'readwrite');
   await Promise.all([
     tx.objectStore('charts').delete(id),

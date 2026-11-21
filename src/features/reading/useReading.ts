@@ -58,9 +58,18 @@ type Options = {
   perspective: School;
   /** 盤上選中的運限要附上的資料 */
   limits?: { label: string; text: string } | undefined;
+  /**
+   * 合盤模式：對話存在另一個索引鍵底下，系統提示詞用兩張盤的資料，
+   * 不附單一命盤的補充資料（宮位、年份）。
+   */
+  compare?: { key: string; context: string; rules: string } | undefined;
 };
 
-export function useReading({ saved, chart, selectedPalace, provider, perspective, limits }: Options): Reading {
+export function useReading({ saved, chart, selectedPalace, provider, perspective, limits, compare }: Options): Reading {
+  // 這段對話屬於哪裡：一般是這張命盤，合盤時是兩張盤的組合。
+  const ownerKey = compare?.key ?? saved.id;
+  const compareContext = compare?.context;
+  const compareRules = compare?.rules;
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -71,7 +80,7 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
 
   useEffect(() => {
     let cancelled = false;
-    listConversations(saved.id)
+    listConversations(ownerKey)
       .then((list) => {
         if (cancelled) return;
         setConversations(list);
@@ -86,7 +95,7 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
       cancelled = true;
       abort.current?.abort();
     };
-  }, [saved.id]);
+  }, [ownerKey]);
 
   // 讓更新提示知道 AI 是否正在回覆，避免在回覆途中重新載入。
   const streaming = pending !== null;
@@ -153,11 +162,14 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
           verbosity: settings.verbosity,
           customPerspective: settings.customPerspective,
           today,
-          chartContext: serializeChart(chart, computeHoroscope(saved.input, saved.chartSettings, today), {
-            school: perspective,
-            // 預設不送稱呼與出生年月日（HANDOFF 第 6.1 節）。
-            ...(settings.includeBirthDate ? { birth: saved.input } : {}),
-          }),
+          chartContext:
+            compareContext ??
+            serializeChart(chart, computeHoroscope(saved.input, saved.chartSettings, today), {
+              school: perspective,
+              // 預設不送稱呼與出生年月日（HANDOFF 第 6.1 節）。
+              ...(settings.includeBirthDate ? { birth: saved.input } : {}),
+            }),
+          ...(compareRules ? { extraRules: compareRules } : {}),
         });
 
         const llm = await getProvider(provider);
@@ -227,7 +239,7 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
         );
       }
     },
-    [chart, commit, perspective, provider, saved],
+    [chart, commit, compareContext, compareRules, perspective, provider, saved],
   );
 
   const send = useCallback(
@@ -236,8 +248,11 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
       if (!text || abort.current) return;
       setProblem('');
       const existing = live.current && live.current.id === currentId ? live.current : current;
-      const base = options?.fresh ? createConversation(saved.id) : (existing ?? createConversation(saved.id));
-      const attachment = buildAttachment({ chart, saved, text, palaceNames: quick?.palaces ?? [], selectedPalace, limits, extra: options?.extra });
+      const base = options?.fresh ? createConversation(ownerKey) : (existing ?? createConversation(ownerKey));
+      // 合盤時不附單一命盤的補充資料：兩張盤與交互關係已經在系統提示詞裡。
+      const attachment = compareContext
+        ? undefined
+        : buildAttachment({ chart, saved, text, palaceNames: quick?.palaces ?? [], selectedPalace, limits, extra: options?.extra });
       const userMessage: UserMessage = {
         role: 'user',
         content: text,
@@ -252,7 +267,7 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
       await commit(conversation);
       await run(conversation);
     },
-    [chart, commit, current, currentId, limits, run, saved, selectedPalace],
+    [chart, commit, compareContext, current, currentId, limits, ownerKey, run, saved, selectedPalace],
   );
 
   const stop = useCallback(() => {

@@ -56,7 +56,10 @@ function isSavedChart(value: unknown): value is SavedChart {
 function isConversation(value: unknown, chartIds: ReadonlySet<string>): value is Conversation {
   if (!isRecord(value) || typeof value.id !== 'string' || !/^[a-z0-9]{8,32}$/.test(value.id)) return false;
   // 只收屬於這份備份裡某張命盤的對話。
-  if (typeof value.chartId !== 'string' || !chartIds.has(value.chartId)) return false;
+  if (typeof value.chartId !== 'string') return false;
+  // 合盤對話的索引鍵是「compare:甲:乙」，兩張盤都要在備份裡。
+  const owners = value.chartId.startsWith('compare:') ? value.chartId.split(':').slice(1) : [value.chartId];
+  if (owners.length === 0 || !owners.every((id) => chartIds.has(id))) return false;
   if (typeof value.title !== 'string' || !Array.isArray(value.messages)) return false;
   return value.messages.every(
     (message) => isRecord(message) && (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string',

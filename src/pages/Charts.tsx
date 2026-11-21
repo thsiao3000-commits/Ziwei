@@ -172,6 +172,9 @@ export function Charts() {
                     >
                       開啟命盤
                     </Link>
+                    <Link to={`/compare/${saved.id}`} className={button} aria-label={`用命盤「${saved.input.name}」合盤`}>
+                      合盤
+                    </Link>
                     <button
                       type="button"
                       className={button}

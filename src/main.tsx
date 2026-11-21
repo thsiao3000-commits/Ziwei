@@ -22,6 +22,7 @@ const router = createHashRouter([
       { path: 'chart/:chartId', lazy: () => import('./pages/Chart').then((module) => ({ Component: module.Chart })) },
       { path: 'rectify/:chartId', lazy: () => import('./pages/Rectify').then((module) => ({ Component: module.Rectify })) },
       { path: 'glossary/:term?', lazy: () => import('./pages/Glossary').then((module) => ({ Component: module.Glossary })) },
+      { path: 'compare/:a?/:b?', lazy: () => import('./pages/Compare').then((module) => ({ Component: module.Compare })) },
       { path: 'charts', lazy: () => import('./pages/Charts').then((module) => ({ Component: module.Charts })) },
       { path: 'settings', lazy: () => import('./pages/Settings').then((module) => ({ Component: module.Settings })) },
       { path: '*', element: <NotFound /> },
