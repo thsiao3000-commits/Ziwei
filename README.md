@@ -25,4 +25,4 @@ pnpm preview      # 以 /Ziwei/ 子路徑預覽 dist/
 
 ## 進度
 
-依 `HANDOFF.md` 第 11 節的里程碑推進。目前完成 M0（骨架、design tokens、字型、CI、部署）與 M1（排盤表單、排盤模組、命盤元件、黃金測試）。
+依 `HANDOFF.md` 第 11 節的里程碑推進。目前完成 M0（骨架、design tokens、字型、CI、部署）、M1（排盤表單、排盤模組、命盤元件、黃金測試）與 M2（設定頁、金鑰本機儲存、LLM 用戶端、模型列表）。

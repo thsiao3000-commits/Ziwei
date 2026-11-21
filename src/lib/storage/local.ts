@@ -1,3 +1,4 @@
+import { closeDB } from './db';
 import { DB_NAME, STORAGE_PREFIX, prefixed } from './keys';
 
 export type StorageArea = 'local' | 'session';
@@ -64,5 +65,7 @@ export async function clearSiteData(): Promise<void> {
   for (const store of [window.localStorage, window.sessionStorage]) {
     for (const key of ownKeys(store)) store.removeItem(key);
   }
+  // 先關掉自己的連線，否則刪除會被擋住。
+  await closeDB();
   await deleteDatabase();
 }

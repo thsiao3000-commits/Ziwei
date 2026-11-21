@@ -24,7 +24,8 @@ export default defineConfig({
   webServer: {
     command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}/Ziwei/`,
-    reuseExistingServer: !process.env.CI,
+    // 一律重新建置：沿用舊的預覽伺服器會測到過期的 dist。
+    reuseExistingServer: false,
     timeout: 180_000,
   },
 });

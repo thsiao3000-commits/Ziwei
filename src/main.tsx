@@ -11,6 +11,7 @@ import '@fontsource/noto-serif-tc/700.css';
 import './styles/index.css';
 
 import { AppShell } from './components/AppShell';
+import { applyTheme, useSettings } from './features/settings/store';
 import { Chart } from './pages/Chart';
 import { Charts } from './pages/Charts';
 import { Home } from './pages/Home';
@@ -30,6 +31,10 @@ const router = createHashRouter([
     ],
   },
 ]);
+
+// 佈景主題在畫面出現前就套用，之後跟著設定變動。
+applyTheme(useSettings.getState().theme);
+useSettings.subscribe((state) => applyTheme(state.theme));
 
 const root = document.getElementById('root');
 if (!root) throw new Error('找不到 #root');
