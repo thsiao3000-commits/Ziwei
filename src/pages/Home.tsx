@@ -45,6 +45,9 @@ export function Home() {
           <BirthForm onSubmit={handleSubmit} />
         </div>
         <p className="mt-6 max-w-[34em] text-sm text-ink-muted">
+          不確定出生時辰也可以先選最可能的一個：排盤後，命盤頁有「比較相鄰時辰的命盤」可以對照。
+        </p>
+        <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
           出生資料只存在這台裝置的瀏覽器，本站沒有伺服器會收到它。
         </p>
       </section>

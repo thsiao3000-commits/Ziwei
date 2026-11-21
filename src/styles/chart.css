@@ -480,6 +480,7 @@
 }
 
 .reading-prose table {
+  position: relative;
   display: block;
   max-width: 100%;
   overflow-x: auto;
@@ -502,6 +503,7 @@
 
 /* 快捷提問與建議追問：手機上橫向捲動。 */
 .chip-row {
+  position: relative;
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;

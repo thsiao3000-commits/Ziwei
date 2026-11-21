@@ -42,13 +42,15 @@ export type AttachmentInput = {
   selectedPalace: number | null;
   /** 盤上選中的運限（大限、流年、流月）資料 */
   limits?: { label: string; text: string } | undefined;
+  /** 另外附上的資料（例如定盤候選） */
+  extra?: { label: string; text: string } | undefined;
 };
 
 /**
  * 這則訊息要附上的命盤補充資料：快捷提問指定的宮位、目前選中的宮位，
  * 以及文字裡提到的年份的流年。沒有東西可附時回傳 undefined。
  */
-export function buildAttachment({ chart, saved, text, palaceNames, selectedPalace, limits }: AttachmentInput): UserMessage['attachment'] {
+export function buildAttachment({ chart, saved, text, palaceNames, selectedPalace, limits, extra }: AttachmentInput): UserMessage['attachment'] {
   const indexes = new Set<number>();
   for (const name of palaceNames) {
     const palace = chart.palaces.find((item) => item.name === name || `${item.name}宮` === name);
@@ -65,9 +67,10 @@ export function buildAttachment({ chart, saved, text, palaceNames, selectedPalac
     labels.push(...[...indexes].map((index) => chart.palaces[index]?.name ?? '').filter(Boolean));
   }
 
-  if (limits) {
-    parts.push(limits.text);
-    labels.push(limits.label);
+  for (const block of [limits, extra]) {
+    if (!block) continue;
+    parts.push(block.text);
+    labels.push(block.label);
   }
 
   const birthYear = Number(chart.solarDate.split('-')[0]);

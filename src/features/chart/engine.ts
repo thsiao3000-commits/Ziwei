@@ -22,6 +22,7 @@ import {
   type PalaceInfo,
   type StarInfo,
   type StarKind,
+  type TimeCandidate,
 } from './types';
 
 type Astrolabe = ReturnType<typeof astro.withOptions>;
@@ -329,3 +330,21 @@ export function computeLimits(input: BirthInput, settings: ChartSettings, select
 }
 
 export { daysInSolarMonth };
+
+/**
+ * 定盤輔助：同一個生日，十三個時辰各排一張盤（0 早子時 … 12 晚子時）。
+ * 時鐘時間不帶入，因為換了時辰就不再適用。排不出來的時辰會略過。
+ */
+export function computeTimeCandidates(input: BirthInput, settings: ChartSettings): TimeCandidate[] {
+  const candidates: TimeCandidate[] = [];
+  for (let timeIndex = 0; timeIndex <= 12; timeIndex += 1) {
+    const { clockTime: _clockTime, ...rest } = input;
+    void _clockTime;
+    try {
+      candidates.push({ timeIndex, chart: computeChart({ ...rest, timeIndex }, settings) });
+    } catch {
+      // 這個時辰排不出盤（理論上不會發生），略過。
+    }
+  }
+  return candidates;
+}

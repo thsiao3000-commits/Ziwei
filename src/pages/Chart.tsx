@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { CentreInfo } from '../features/chart/CentreInfo';
 import { ChartBoard } from '../features/chart/ChartBoard';
 import { DensityControl } from '../features/chart/DensityControl';
@@ -72,9 +72,11 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
   );
 }
 
-type ReadyProps = { saved: SavedChart; chart: ChartData; fresh: boolean; onRecast: () => void };
+export type PendingAsk = { message: string; extra: { label: string; text: string } };
 
-function ChartView({ saved, chart, fresh, onRecast }: ReadyProps) {
+type ReadyProps = { saved: SavedChart; chart: ChartData; fresh: boolean; onRecast: () => void; pendingAsk: PendingAsk | null };
+
+function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
   const [selected, setSelected] = useState<number | null>(null);
   // 桌機側欄的分頁：解讀，或選中宮位的詳情。
   const [tab, setTab] = useState<'reading' | 'detail'>('reading');
@@ -125,6 +127,19 @@ function ChartView({ saved, chart, fresh, onRecast }: ReadyProps) {
   }
 
   const reading = useReading({ saved, chart, selectedPalace: selected, provider, perspective, limits: limitAttachment });
+
+  // 從「時辰對照」頁按了「請 AI 協助分辨」過來：對話讀取完成後，開一段新對話送出一次。
+  const navigate = useNavigate();
+  const asked = useRef(false);
+  const ready = reading.conversations !== null;
+  const { send } = reading;
+  useEffect(() => {
+    if (!pendingAsk || !ready || !provider || asked.current) return;
+    asked.current = true;
+    void send(pendingAsk.message, { palaces: [] }, { fresh: true, extra: pendingAsk.extra });
+    // 清掉路由狀態，重新整理時不會再問一次。
+    void navigate('.', { replace: true, state: null });
+  }, [navigate, pendingAsk, provider, ready, send]);
   const palace = selected === null ? undefined : chart.palaces[selected];
 
   function selectPalace(index: number | null) {
@@ -179,6 +194,11 @@ function ChartView({ saved, chart, fresh, onRecast }: ReadyProps) {
           </h1>
           <DensityControl value={density} onChange={setDensity} />
         </div>
+        <p className="mb-3 text-sm">
+          <Link to={`/rectify/${saved.id}`} className="text-accent underline underline-offset-4">
+            不確定出生時辰？比較相鄰時辰的命盤
+          </Link>
+        </p>
         <div className="mx-auto w-full max-w-[720px]">
           <ChartBoard
             chart={chart}
@@ -265,7 +285,8 @@ export function Chart() {
   const loaded = useChart(chartId, version);
 
   // 從表單排出來的那一次才播放落位動畫；重新整理或從清單開啟不播。
-  const fresh = (location.state as { fresh?: boolean } | null)?.fresh === true;
+  const state = location.state as { fresh?: boolean; ask?: PendingAsk } | null;
+  const fresh = state?.fresh === true;
 
   if (loaded.status === 'loading') {
     return (
@@ -289,6 +310,7 @@ export function Chart() {
       chart={loaded.chart}
       fresh={fresh && version === 0}
       onRecast={() => setVersion((current) => current + 1)}
+      pendingAsk={state?.ask ?? null}
     />
   );
 }

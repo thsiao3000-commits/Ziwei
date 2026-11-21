@@ -26,10 +26,17 @@ export async function getChart(id: string): Promise<SavedChart | undefined> {
   return (await getDB()).get('charts', id);
 }
 
-/** 修改命盤記錄（重新命名、釘選、改用新的排盤設定）。找不到時回傳 undefined。 */
+/** 換時辰：原本輸入的時鐘時間不再適用，一併拿掉。 */
+function withTime(input: BirthInput, timeIndex: number): BirthInput {
+  const { clockTime: _clockTime, ...rest } = input;
+  void _clockTime;
+  return { ...rest, timeIndex };
+}
+
+/** 修改命盤記錄（重新命名、釘選、改用新的排盤設定、改時辰）。找不到時回傳 undefined。 */
 export async function updateChart(
   id: string,
-  patch: { name?: string; pinned?: boolean; chartSettings?: ChartSettings },
+  patch: { name?: string; pinned?: boolean; chartSettings?: ChartSettings; timeIndex?: number },
 ): Promise<SavedChart | undefined> {
   const db = await getDB();
   const current = await db.get('charts', id);
@@ -38,6 +45,7 @@ export async function updateChart(
     ...current,
     ...(patch.name !== undefined ? { input: { ...current.input, name: patch.name.trim() || current.input.name } } : {}),
     ...(patch.pinned !== undefined ? { pinned: patch.pinned } : {}),
+    ...(patch.timeIndex !== undefined ? { input: withTime(current.input, patch.timeIndex) } : {}),
     ...(patch.chartSettings ? { chartSettings: { ...patch.chartSettings } } : {}),
     updatedAt: new Date().toISOString(),
   };

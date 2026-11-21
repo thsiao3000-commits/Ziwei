@@ -22,6 +22,13 @@ export type Pending = {
   model: string;
 };
 
+export type SendOptions = {
+  /** 開一段新對話來問，不接在目前的對話後面 */
+  fresh?: boolean;
+  /** 另外附上的資料（例如定盤候選） */
+  extra?: { label: string; text: string };
+};
+
 export type Reading = {
   /** null：還在讀取本機的對話 */
   conversations: Conversation[] | null;
@@ -29,7 +36,7 @@ export type Reading = {
   pending: Pending | null;
   /** 本機儲存失敗等、不屬於某一則回覆的錯誤 */
   problem: string;
-  send: (text: string, quick?: Pick<QuickPrompt, 'palaces'>) => Promise<void>;
+  send: (text: string, quick?: Pick<QuickPrompt, 'palaces'>, options?: SendOptions) => Promise<void>;
   stop: () => void;
   regenerate: () => Promise<void>;
   continueReply: () => Promise<void>;
@@ -193,12 +200,13 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
   );
 
   const send = useCallback(
-    async (rawText: string, quick?: Pick<QuickPrompt, 'palaces'>) => {
+    async (rawText: string, quick?: Pick<QuickPrompt, 'palaces'>, options?: SendOptions) => {
       const text = rawText.trim();
       if (!text || abort.current) return;
       setProblem('');
-      const base = live.current && live.current.id === currentId ? live.current : (current ?? createConversation(saved.id));
-      const attachment = buildAttachment({ chart, saved, text, palaceNames: quick?.palaces ?? [], selectedPalace, limits });
+      const existing = live.current && live.current.id === currentId ? live.current : current;
+      const base = options?.fresh ? createConversation(saved.id) : (existing ?? createConversation(saved.id));
+      const attachment = buildAttachment({ chart, saved, text, palaceNames: quick?.palaces ?? [], selectedPalace, limits, extra: options?.extra });
       const userMessage: UserMessage = {
         role: 'user',
         content: text,

@@ -186,6 +186,12 @@ export type Limits = {
   selection: LimitSelection;
 };
 
+/** 定盤輔助：同一個生日換成某個時辰排出的盤。 */
+export type TimeCandidate = {
+  timeIndex: number;
+  chart: ChartData;
+};
+
 export type ChartErrorCode =
   | 'invalid_format'
   | 'out_of_range'
