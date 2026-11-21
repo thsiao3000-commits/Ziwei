@@ -1,0 +1,93 @@
+/*
+ * Design tokens（HANDOFF 第 8.1 節：青花與夜觀）。
+ * 元件一律用語意 token，不直接寫色值。色相固定，只為了對比調整明度。
+ */
+
+:root {
+  /* 原色 */
+  --porcelain: #f7f9fa; /* 瓷白 */
+  --cobalt: #20408c; /* 鈷藍 */
+  --indigo: #14213d; /* 藏青 */
+  --moon: #dce8ee; /* 月白 */
+  --cinnabar: #c8372d; /* 朱砂 */
+  --gamboge: #e0a526; /* 藤黃：只當底色或圖形 */
+  --azurite: #2c7fb8; /* 石青：化權 */
+  --malachite: #2e8b6f; /* 石綠：化科 */
+  --ziwei-purple: #7a3fa0; /* 全站唯一的紫色，只給紫微星 */
+
+  /* 字體 */
+  --font-kai: 'LXGW WenKai TC', 'BiauKai', 'DFKai-SB', 'Kaiti TC', 'STKaiti', serif;
+  --font-serif: 'Noto Serif TC', 'Songti TC', 'PMingLiU', 'Source Han Serif TC', serif;
+
+  /* 圓角依層級區分；命盤格線為 0 */
+  --radius-control: 4px;
+  --radius-sheet: 12px;
+
+  /* 內文行長 30–36 個中文字 */
+  --measure: 34em;
+}
+
+/* 青花（淺色） */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: var(--porcelain);
+  --surface: var(--moon);
+  --ink: var(--indigo);
+  --ink-muted: #47536d;
+  --line: var(--cobalt);
+  --line-soft: #b9c6dc;
+  --accent: var(--cobalt);
+  --accent-ink: var(--porcelain);
+  --danger: #b52f26;
+  --ziwei: var(--ziwei-purple);
+  --hua-lu-bg: var(--gamboge);
+  --hua-lu-ink: var(--indigo);
+  --hua-quan: #236a9b;
+  --hua-ke: #23745c;
+  --hua-ji: #b52f26;
+  --focus: var(--cobalt);
+}
+
+/* 夜觀（深色）：同一個藍的反相 */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: var(--indigo);
+  --surface: #1d2f55;
+  --ink: var(--moon);
+  --ink-muted: #a9bccb;
+  --line: var(--moon);
+  --line-soft: #3a4d74;
+  --accent: var(--moon);
+  --accent-ink: var(--indigo);
+  --danger: #f08379;
+  --ziwei: #c39ae0;
+  --hua-lu-bg: var(--gamboge);
+  --hua-lu-ink: var(--indigo);
+  --hua-quan: #7fbbe3;
+  --hua-ke: #7ccbb0;
+  --hua-ji: #f08379;
+  --focus: var(--gamboge);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: var(--indigo);
+    --surface: #1d2f55;
+    --ink: var(--moon);
+    --ink-muted: #a9bccb;
+    --line: var(--moon);
+    --line-soft: #3a4d74;
+    --accent: var(--moon);
+    --accent-ink: var(--indigo);
+    --danger: #f08379;
+    --ziwei: #c39ae0;
+    --hua-lu-bg: var(--gamboge);
+    --hua-lu-ink: var(--indigo);
+    --hua-quan: #7fbbe3;
+    --hua-ke: #7ccbb0;
+    --hua-ji: #f08379;
+    --focus: var(--gamboge);
+  }
+}
