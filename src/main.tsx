@@ -6,7 +6,7 @@ import { RouterProvider } from 'react-router/dom';
 import './styles/index.css';
 
 import { AppShell } from './components/AppShell';
-import { retryAfterReload } from './components/UpdateBanner';
+import { reloadForStaleChunks, retryAfterReload } from './components/UpdateBanner';
 import { applyTheme, useSettings } from './features/settings/store';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
@@ -35,6 +35,12 @@ useSettings.subscribe((state) => applyTheme(state.theme));
 
 const root = document.getElementById('root');
 if (!root) throw new Error('找不到 #root');
+
+// 新版部署後，舊分頁要延後載入的程式區塊（其他頁面、AI 用戶端、Markdown）已經不在伺服器上。
+// Vite 載入失敗時會發出這個事件：直接重新載入換成最新版。
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadForStaleChunks()) event.preventDefault();
+});
 
 // 剛按過「立即更新」但載到的還是舊版時，會換成帶版本參數的網址重載，這次就不必畫了。
 if (!retryAfterReload()) {

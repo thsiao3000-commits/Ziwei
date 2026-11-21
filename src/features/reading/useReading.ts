@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { computeHoroscope } from '../chart/engine';
 import type { ChartData, SavedChart } from '../chart/types';
+import { isChunkLoadError, isChunkReloadPending, reloadForStaleChunks } from '../../components/UpdateBanner';
 import { useBusy } from '../../lib/busy';
-import { getProvider } from '../../lib/llm';
+import { getProvider, ModuleLoadError } from '../../lib/llm';
 import type { ProviderId } from '../../lib/llm/types';
 import { getKey } from '../settings/keys';
 import { effectiveModel, useSettings } from '../settings/store';
@@ -120,6 +121,8 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
       const base: Omit<AssistantMessage, 'content'> = { role: 'assistant', provider, model, createdAt: new Date().toISOString() };
 
       const finish = async (message: AssistantMessage) => {
+        // 頁面正要重新載入換成新版：這次沒有結果可記。提問已經存好，重新載入後可以直接重新產生。
+        if (isChunkReloadPending()) return;
         setPending(null);
         abort.current = null;
         await commit({ ...conversation, messages: [...conversation.messages, message] });
@@ -195,10 +198,18 @@ export function useReading({ saved, chart, selectedPalace, provider, perspective
           setPending(null);
           abort.current = null;
         }
-      } catch {
+      } catch (error) {
+        // 網站剛更新過：這個分頁要用的 AI 模組已經不在伺服器上。重新載入後，提問還在，可以直接重新產生。
+        const stale = error instanceof ModuleLoadError || isChunkLoadError(error);
+        if (stale && reloadForStaleChunks()) return;
         await finish(
           message({
-            error: { code: 'unknown', message: '提問時發生未預期的錯誤。請再試一次；如果持續發生，請重新整理頁面。' },
+            error: {
+              code: 'unknown',
+              message: stale
+                ? '網站剛更新過，這個分頁還是舊版，AI 模組載入失敗。請重新整理頁面，再按「重新產生」。'
+                : '提問時發生未預期的錯誤。請再試一次；如果持續發生，請重新整理頁面。',
+            },
             ...(text ? { incomplete: 'interrupted' } : {}),
           }),
         );

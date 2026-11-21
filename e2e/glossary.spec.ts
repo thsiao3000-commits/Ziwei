@@ -62,6 +62,9 @@ test('盤上的名詞可以點：就地顯示說明，並可連到辭典', async
   await detail.getByRole('button', { name: /^命宮.*（看名詞說明）$/ }).click();
   await expect(note).toContainText('整張盤最重要的宮位');
 
+  // 等命盤的落位動畫結束再檢查對比（動畫途中文字是半透明的）。
+  await page.waitForTimeout(1500);
+
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice']).analyze();
   expect(results.violations.map((violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ')}`)).toEqual([]);
 

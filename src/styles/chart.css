@@ -414,9 +414,9 @@
   }
 }
 
-/* 解讀文字：明體，行長 30–36 個中文字，行高比無襯線字體略大。 */
+/* 解讀文字：明體，行高比無襯線字體略大。行長上限是 68 個中文字（業主指定，原本的 34 字在寬螢幕上太窄）。 */
 .reading-prose {
-  max-width: var(--measure);
+  max-width: 68em;
   line-height: 1.95;
   overflow-wrap: anywhere;
 }

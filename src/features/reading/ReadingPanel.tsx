@@ -446,6 +446,15 @@ export function ReadingPanel({
             ),
           )}
           {pending && <PendingReply pending={pending} onStop={reading.stop} />}
+          {/* 提問送出後還沒收到回覆就離開或重新載入：提問還在，讓使用者可以直接要回覆。 */}
+          {!pending && messages.at(-1)?.role === 'user' && (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-ink-muted">這則提問還沒有回覆。</p>
+              <button type="button" className={smallButton} onClick={() => void reading.regenerate()}>
+                重新產生
+              </button>
+            </div>
+          )}
         </div>
       )}
 

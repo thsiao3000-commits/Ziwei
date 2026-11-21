@@ -54,6 +54,9 @@ test('開頁時線上有新版、還沒開始操作：自動載入最新版，�
   await expect(page).toHaveURL(/\/Ziwei\/#\/settings$/);
   // 測試環境沒有真的新版：同一版不會再自動重載，改成提示條。
   await expect(page.getByRole('button', { name: '立即更新' })).toBeVisible({ timeout: 10_000 });
+  // 提示條可能比最後一次載入的 load 事件早出現，先等它落定再比較。
+  await page.waitForLoadState('load');
+  await page.waitForTimeout(1000);
   const settled = loads;
   await page.waitForTimeout(1500);
   expect(loads).toBe(settled);

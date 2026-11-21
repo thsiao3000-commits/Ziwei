@@ -9,6 +9,40 @@ const TARGET_KEY = 'update-target';
 /** 這個分頁已經自動更新過哪一版（避免載不到新版時一直重載）。 */
 const AUTO_KEY = 'update-auto';
 
+const CHUNK_RELOAD_KEY = 'chunk-reload';
+
+/** 是不是「程式區塊載入失敗」：新版部署後，舊分頁要用的檔案已經不在伺服器上。 */
+export function isChunkLoadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /dynamically imported module|Importing a module script failed|Failed to fetch dynamically|Unable to preload|error loading dynamically/i.test(
+    message,
+  );
+}
+
+/**
+ * 程式區塊載入失敗時，重新載入頁面換成最新版。一分鐘內只做一次，避免真的斷線時一直重載。
+ * 回傳 true 表示頁面即將重新載入。
+ */
+let chunkReloadPending = false;
+
+/** 頁面是否正要因為程式區塊載入失敗而重新載入。 */
+export function isChunkReloadPending(): boolean {
+  return chunkReloadPending;
+}
+
+export function reloadForStaleChunks(): boolean {
+  // 同一次失敗可能從兩個地方通報（Vite 的事件與呼叫端的 catch）：已經在重新載入就不必再做。
+  if (chunkReloadPending) return true;
+  const last = Number(readItem(CHUNK_RELOAD_KEY, 'session') ?? 0);
+  if (Date.now() - last < 60_000) return false;
+  writeItem(CHUNK_RELOAD_KEY, String(Date.now()), 'session');
+  chunkReloadPending = true;
+  void fetch(window.location.pathname, { cache: 'reload' })
+    .catch(() => undefined)
+    .finally(() => window.location.reload());
+  return true;
+}
+
 /** 換成線上的最新版：先刷新瀏覽器快取，再重新載入。 */
 async function reloadToVersion(version: string): Promise<void> {
   writeItem(TARGET_KEY, version, 'session');

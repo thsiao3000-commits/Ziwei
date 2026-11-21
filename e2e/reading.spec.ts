@@ -237,3 +237,52 @@ test('開啟「附上出生年月日」後才送出稱呼與生日', async ({ pa
   expect(bodies[0]!.system).toContain('【出生】稱呼 小明');
   expect(bodies[0]!.system).toContain('國曆 2000-8-16');
 });
+
+test('網站更新後舊分頁載不到 AI 模組：自動重新載入，提問還在，可以直接重新產生', async ({ page }) => {
+  const { bodies } = await setup(page);
+  // 模擬新版部署後，舊分頁要用的程式區塊已經不在伺服器上（只失敗第一次）。
+  let failed = 0;
+  await page.route('**/assets/anthropic-*.js', async (route) => {
+    if (failed === 0) {
+      failed += 1;
+      return route.fulfill({ status: 404, contentType: 'text/html', body: 'Not Found' });
+    }
+    return route.continue();
+  });
+  let loads = 0;
+  page.on('load', () => (loads += 1));
+
+  await castChart(page);
+  const before = loads;
+  const reading = panel(page);
+  await reading.getByRole('button', { name: '事業' }).click();
+
+  // 自動重新載入；提問已經存在本機，不會不見。
+  await expect.poll(() => loads, { timeout: 15_000 }).toBeGreaterThan(before);
+  const after = panel(page);
+  await expect(after.getByLabel('對話內容').getByText('我的事業發展如何？適合什麼樣的工作方式？')).toBeVisible();
+  await expect(after.getByText('這則提問還沒有回覆。')).toBeVisible();
+  await expect(after.getByRole('alert')).toHaveCount(0);
+  expect(bodies).toHaveLength(0);
+
+  await after.getByRole('button', { name: '重新產生' }).click();
+  await expect(after.getByText('命宮紫微坐守，格局穩重。')).toBeVisible();
+  await expect(after.getByText('這則提問還沒有回覆。')).toHaveCount(0);
+  expect(bodies).toHaveLength(1);
+  // 只重新載入一次。
+  expect(loads).toBe(before + 1);
+});
+
+test('解讀文字的行寬上限是 68 個字', async ({ page }) => {
+  await setup(page);
+  await castChart(page);
+  const reading = panel(page);
+  await reading.getByRole('button', { name: '命盤總論' }).click();
+  await expect(reading.getByText('命宮紫微坐守，格局穩重。')).toBeVisible();
+  const prose = reading.locator('.reading-prose').first();
+  const { maxWidth, fontSize } = await prose.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { maxWidth: parseFloat(style.maxWidth), fontSize: parseFloat(style.fontSize) };
+  });
+  expect(Math.round(maxWidth / fontSize)).toBe(68);
+});
