@@ -139,7 +139,7 @@ export function Charts() {
                   </form>
                 ) : (
                   <p>
-                    <Link to={`/chart/${saved.id}`} className="font-kai text-[1.25rem] font-bold underline-offset-4 hover:underline">
+                    <Link to={`/chart/${saved.id}`} className="font-kai text-[1.25rem] font-bold underline decoration-line-soft underline-offset-4 hover:decoration-line">
                       {saved.input.name}
                     </Link>
                     {saved.pinned && <span className="ml-2 border border-line px-1 font-kai text-sm">已釘選</span>}
@@ -164,6 +164,14 @@ export function Charts() {
                   </>
                 ) : (
                   <>
+                    {/* 稱呼常常只有一兩個字，光靠它當連結不容易發現，所以另外放一顆明確的按鈕。 */}
+                    <Link
+                      to={`/chart/${saved.id}`}
+                      className="rounded-control bg-accent px-4 py-1 font-kai font-bold text-accent-ink"
+                      aria-label={`開啟命盤「${saved.input.name}」`}
+                    >
+                      開啟命盤
+                    </Link>
                     <button
                       type="button"
                       className={button}

@@ -92,7 +92,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('heading', { level: 1, name: '設定' })).toBeVisible();
       await scan(page, '設定');
       await page.goto('./#/charts');
-      await expect(page.getByRole('link', { name: '小明' })).toBeVisible();
+      await expect(page.getByRole('link', { name: '小明', exact: true })).toBeVisible();
       await page.getByRole('button', { name: '重新命名命盤「小明」' }).click();
       await scan(page, '我的命盤');
     });

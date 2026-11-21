@@ -113,7 +113,7 @@ test('命盤存在本機：重新整理仍在，出現在我的命盤，可以�
   expect(storage.databases).toEqual(['ziwei-db']);
 
   await page.goto('./#/charts');
-  await expect(page.getByRole('link', { name: '小明' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '小明', exact: true })).toBeVisible();
   await expect(page.getByText('命宮：紫微')).toBeVisible();
 
   await page.getByRole('button', { name: '刪除命盤「小明」' }).click();

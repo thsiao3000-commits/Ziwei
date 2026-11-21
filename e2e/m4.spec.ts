@@ -207,8 +207,12 @@ test('我的命盤：最後開啟、釘選、重新命名', async ({ page }) => 
   await page.getByRole('button', { name: '重新命名命盤「甲」' }).click();
   await page.getByLabel('稱呼').fill('甲的新名字');
   await page.getByRole('button', { name: '儲存稱呼' }).click();
-  await expect(page.getByRole('link', { name: '甲的新名字' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '甲的新名字', exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: '甲的新名字' }).click();
+  // 開啟命盤：稱呼是連結，另外有一顆明確的「開啟命盤」。
+  await page.getByRole('link', { name: '開啟命盤「甲的新名字」' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '甲的新名字的命盤' })).toBeVisible();
+  await page.goto('./#/charts');
+  await page.getByRole('link', { name: '甲的新名字', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: '甲的新名字的命盤' })).toBeVisible();
 });
