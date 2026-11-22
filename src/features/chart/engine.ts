@@ -3,7 +3,7 @@
  * 星曜位置、四化、三方四正、飛化一律在這裡由 iztro 計算，
  * 其他程式只拿這裡輸出的本站型別，不接觸 iztro 的物件。
  */
-import { astro, version as iztroVersion } from 'iztro';
+import { astro, util, version as iztroVersion } from 'iztro';
 import { daysInSolarMonth } from './calendar';
 import {
   ChartInputError,
@@ -29,11 +29,14 @@ type Astrolabe = ReturnType<typeof astro.withOptions>;
 type IztroPalace = Astrolabe['palaces'][number];
 type IztroStar = IztroPalace['majorStars'][number];
 
-/** iztro 的 zh-TW 語系在農曆日期裡仍輸出簡體字，這裡補成繁體。 */
-const TRADITIONAL: Record<string, string> = { 腊: '臘', 闰: '閏' };
+/**
+ * iztro 有幾處不跟著 zh-TW 語系走，仍輸出簡體字：農曆日期，以及依天干查四化星的工具函式。
+ * 這裡只做字形轉換（哪顆星化什麼仍由 iztro 決定），補成和盤上一致的繁體星名。
+ */
+const TRADITIONAL: Record<string, string> = { 腊: '臘', 闰: '閏', 贞: '貞', 军: '軍', 阳: '陽', 机: '機', 阴: '陰', 门: '門', 贪: '貪', 辅: '輔' };
 
 function toTraditional(text: string): string {
-  return text.replace(/[腊闰]/g, (char) => TRADITIONAL[char] ?? char);
+  return text.replace(/[腊闰贞军阳机阴门贪辅]/g, (char) => TRADITIONAL[char] ?? char);
 }
 
 function parseDate(date: string): { year: number; month: number; day: number } {
@@ -101,6 +104,9 @@ function toPalace(astrolabe: Astrolabe, palace: IztroPalace): PalaceInfo {
     MUTAGENS.map((mutagen, i) => [mutagen, flown[i]?.index ?? null]),
   ) as Record<Mutagen, number | null>;
 
+  const flyNames = util.getMutagensByHeavenlyStem(palace.heavenlyStem);
+  const flyStars = Object.fromEntries(MUTAGENS.map((mutagen, i) => [mutagen, toTraditional(flyNames[i] ?? '')])) as Record<Mutagen, string>;
+
   return {
     index: palace.index,
     name: palace.name,
@@ -124,6 +130,7 @@ function toPalace(astrolabe: Astrolabe, palace: IztroPalace): PalaceInfo {
       career: around.career.index,
     },
     flies,
+    flyStars,
   };
 }
 

@@ -1,13 +1,17 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { computeChart } from '../src/features/chart/engine';
+import { computeChart, computeHoroscope } from '../src/features/chart/engine';
 import { deleteChart, saveChart } from '../src/features/chart/store';
 import { DEFAULT_CHART_SETTINGS, MUTAGENS, type BirthInput } from '../src/features/chart/types';
 import {
   COMPARE_PROMPTS,
   COMPARE_RULES,
   compareKey,
+  compareYears,
+  crossDecadal,
+  crossFlies,
   crossMutagens,
+  limitSummary,
   palaceRows,
   parseCompareKey,
   serializeCompare,
@@ -102,7 +106,7 @@ describe('合盤：給 AI 的資料', () => {
   });
 
   it('快捷提問不帶單一命盤的宮位', () => {
-    expect(COMPARE_PROMPTS.map((item) => item.label)).toEqual(['整體互動', '感情相處', '溝通與衝突', '金錢觀', '合作共事', '親子或家人']);
+    expect(COMPARE_PROMPTS.map((item) => item.label)).toEqual(['整體互動', '感情相處', '溝通與衝突', '金錢觀', '合作共事', '飛星互動', '這一年的相處', '親子或家人']);
     expect(COMPARE_PROMPTS.every((item) => item.palaces.length === 0)).toBe(true);
   });
 });
@@ -144,5 +148,107 @@ describe('合盤：對話的保存', () => {
     expect(parseBackup(JSON.stringify(backup)).conversations).toHaveLength(1);
     const missingOne = { ...backup, charts: backup.charts.filter((chart) => chart.id !== two.id) };
     expect(parseBackup(JSON.stringify(missingOne)).conversations).toEqual([]);
+  });
+});
+
+describe('合盤：飛星互入與運限（v1.6.0）', () => {
+  it('每一宮的宮干四化星名是盤上的繁體星名，且和宮干飛化的落點一致', () => {
+    for (const chart of [a, b]) {
+      for (const palace of chart.palaces) {
+        for (const mutagen of MUTAGENS) {
+          const star = palace.flyStars[mutagen];
+          expect(star, `${palace.name} 化${mutagen}`).toMatch(/^[一-鿿]{2}$/);
+          const target = palace.flies[mutagen];
+          expect(target, `${palace.name} 化${mutagen} ${star}`).not.toBeNull();
+          const names = [...chart.palaces[target!]!.majorStars, ...chart.palaces[target!]!.minorStars].map((item) => item.name);
+          expect(names, `${star} 應在${chart.palaces[target!]!.name}`).toContain(star);
+        }
+      }
+    }
+  });
+
+  it('飛星互入：十二宮各四顆星，落點是對方盤上有那顆星的宮；自己對自己等於宮干飛化', () => {
+    const rows = crossFlies(a, b);
+    expect(rows.map((row) => row.palace)).toEqual(['命宮', '兄弟', '夫妻', '子女', '財帛', '疾厄', '遷移', '僕役', '官祿', '田宅', '福德', '父母']);
+    for (const row of rows) {
+      expect(row.items.map((item) => item.mutagen)).toEqual([...MUTAGENS]);
+      for (const item of row.items) {
+        const palace = b.palaces.find((candidate) => candidate.name === item.palaceName)!;
+        expect([...palace.majorStars, ...palace.minorStars].map((star) => star.name)).toContain(item.star);
+      }
+    }
+    for (const row of crossFlies(a, a)) {
+      const palace = a.palaces.find((item) => item.name === row.palace)!;
+      expect(row.stem).toBe(palace.stem);
+      expect(row.items.map((item) => item.palaceName)).toEqual(MUTAGENS.map((mutagen) => a.palaces[palace.flies[mutagen]!]!.name));
+    }
+  });
+
+  const ha = computeHoroscope(inputA, DEFAULT_CHART_SETTINGS, '2026-7-1');
+  const hb = computeHoroscope(inputB, DEFAULT_CHART_SETTINGS, '2026-7-1');
+
+  it('運限摘要：大限與流年的干支、命宮落點與四化落點', () => {
+    const summary = limitSummary(a, ha);
+    expect(summary.age).toBe(27);
+    expect(summary.yearly.stemBranch).toBe('丙午');
+    expect(summary.yearly.mutagens.map((item) => `${item.mutagen}${item.star}`)).toEqual(['祿天同', '權天機', '科文昌', '忌廉貞']);
+    expect(summary.yearly.palaceName).toBe(a.palaces.find((palace) => palace.branch === '午')!.name);
+    expect(summary.decadal).not.toBeNull();
+    expect(summary.decadal!.ageRange[0]).toBeLessThanOrEqual(27);
+    expect(summary.decadal!.ageRange[1]).toBeGreaterThanOrEqual(27);
+    for (const item of [...summary.decadal!.mutagens, ...summary.yearly.mutagens]) {
+      const palace = a.palaces.find((candidate) => candidate.name === item.palaceName)!;
+      expect([...palace.majorStars, ...palace.minorStars].map((star) => star.name)).toContain(item.star);
+    }
+    // 同一年，兩人的流年干支與四化星相同，落點各看各的盤。
+    const other = limitSummary(b, hb);
+    expect(other.yearly.stemBranch).toBe('丙午');
+    expect(other.yearly.mutagens.map((item) => item.star)).toEqual(summary.yearly.mutagens.map((item) => item.star));
+  });
+
+  it('大限四化落在對方盤；還沒起運時是空的', () => {
+    const cross = crossDecadal(ha, b);
+    expect(cross.map((item) => item.star)).toEqual(ha.decadal!.mutagens.map((item) => item.star));
+    for (const item of cross) {
+      const palace = b.palaces.find((candidate) => candidate.name === item.palaceName)!;
+      expect([...palace.majorStars, ...palace.minorStars].map((star) => star.name)).toContain(item.star);
+    }
+    const infant = computeHoroscope(inputA, DEFAULT_CHART_SETTINGS, '2000-12-1');
+    expect(infant.decadal).toBeNull();
+    expect(crossDecadal(infant, b)).toEqual([]);
+    expect(limitSummary(a, infant).decadal).toBeNull();
+  });
+
+  it('可選的年份：兩人都出生之後，到較晚出生者的一百歲，不超過上限', () => {
+    const years = compareYears(a, b, 2100);
+    expect(years[0]).toBe(2000);
+    expect(years.at(-1)).toBe(2100);
+    expect(compareYears(b, b, 2100).at(-1)).toBe(2095);
+    expect(compareYears(a, b, 2050).at(-1)).toBe(2050);
+  });
+
+  it('給模型的資料：有飛星互入；選了年份才有運限', () => {
+    const pa = { label: '甲', chart: a } as const;
+    const pb = { label: '乙', chart: b } as const;
+    const plain = serializeCompare(pa, pb, 'sanhe');
+    expect(plain).toContain('【宮干飛化互入（由排盤程式計算）】');
+    expect(plain).toContain('甲的宮干四化飛入乙盤');
+    expect(plain).toContain('乙的宮干四化飛入甲盤');
+    const first = crossFlies(a, b)[0]!;
+    expect(plain).toContain(`命宮（${first.stem}）：祿 ${first.items[0]!.star}→${first.items[0]!.palaceName}`);
+    expect(plain).toContain('【運限】使用者這次沒有選年份');
+    expect(plain).not.toContain('【流年');
+
+    const withYear = serializeCompare(pa, pb, 'sanhe', { year: 2026, a: ha, b: hb });
+    expect(withYear).toContain('【2026 年的運限（由排盤程式計算）】');
+    expect(withYear.match(/【流年 2026】/g)).toHaveLength(2);
+    expect(withYear).toContain('甲的大限四化落在乙盤：');
+    expect(withYear).toContain('乙的大限四化落在甲盤：');
+    expect(withYear).not.toContain('使用者這次沒有選年份');
+    // 不含稱呼與生日
+    expect(withYear).not.toContain('小明');
+    expect(withYear).not.toContain('2000-8-16');
+    expect(COMPARE_RULES).toContain('不要自己推算那一年的四化');
+    expect(COMPARE_PROMPTS.map((item) => item.label)).toEqual(expect.arrayContaining(['飛星互動', '這一年的相處']));
   });
 });

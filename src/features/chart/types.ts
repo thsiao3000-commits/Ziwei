@@ -92,6 +92,8 @@ export type PalaceInfo = {
   surrounded: { opposite: number; wealth: number; career: number };
   /** 宮干飛化：祿、權、科、忌各飛入哪一宮（找不到該星時為 null） */
   flies: Record<Mutagen, number | null>;
+  /** 宮干四化的星名：這一宮的天干讓哪四顆星化祿、權、科、忌（合盤看它們落在對方盤的哪一宮） */
+  flyStars: Record<Mutagen, string>;
 };
 
 export type BirthMutagen = { mutagen: Mutagen; star: string; palaceIndex: number };

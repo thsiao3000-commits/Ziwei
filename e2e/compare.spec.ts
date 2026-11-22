@@ -79,6 +79,27 @@ test('合盤：選兩張盤 → 並排、交互關係、逐宮對照 → 請 AI 
   await expect(stars.locator('tbody tr')).toHaveCount(12);
   await expect(stars.getByRole('row', { name: /^命宮/ })).toContainText('紫微(廟)');
 
+  // 飛星互入：兩個方向各十二宮、四化各一欄
+  for (const name of ['阿華的宮干四化飛入小明的盤', '小明的宮干四化飛入阿華的盤']) {
+    const fly = page.getByRole('table', { name });
+    await expect(fly.locator('tbody tr')).toHaveCount(12);
+    await expect(fly.getByRole('columnheader')).toHaveText([/的宮位$/, '化祿', '化權', '化科', '化忌']);
+    await expect(fly.getByRole('row', { name: /^命宮/ }).getByRole('cell')).toHaveText([/^.{2} → .+宮$/, /^.{2} → .+宮$/, /^.{2} → .+宮$/, /^.{2} → .+宮$/]);
+  }
+
+  // 運限：預設今年；改選 2030 年（庚戌）
+  const year = page.getByLabel('要看的年份');
+  await expect(year).toHaveValue(String(new Date().getFullYear()));
+  await year.selectOption('2030');
+  const limits = page.getByRole('table', { name: '2030 年的運限' });
+  await expect(limits.locator('tbody tr')).toHaveCount(6);
+  await expect(limits.getByRole('row', { name: /^虛歲/ })).toContainText('36 歲');
+  await expect(limits.getByRole('row', { name: /^虛歲/ })).toContainText('31 歲');
+  await expect(limits.getByRole('row', { name: /^流年 / })).toContainText('庚戌，命宮落在本命');
+  await expect(limits.getByRole('row', { name: /^流年四化/ })).toContainText('祿 太陽 →');
+  await expect(limits.getByRole('row', { name: /^大限四化落在對方盤/ }).getByRole('cell').first()).toContainText(/祿 .{2} → .+宮；權/);
+  await expect(page.getByText('宮宮')).toHaveCount(0);
+
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(600);
   await page.screenshot({ path: testInfo.outputPath('compare.png'), fullPage: true });
@@ -106,6 +127,13 @@ test('合盤：選兩張盤 → 並排、交互關係、逐宮對照 → 請 AI 
   expect(system).toContain('＝＝＝ 乙 ＝＝＝');
   expect(system).toContain('【兩盤的交互關係（由排盤程式計算）】');
   expect(system.match(/【本命十二宮】/g)).toHaveLength(2);
+  // 飛星互入與選定年份的運限，都是程式算好才交給模型
+  expect(system).toContain('【宮干飛化互入（由排盤程式計算）】');
+  expect(system).toContain('甲的宮干四化飛入乙盤');
+  expect(system).toContain('【2030 年的運限（由排盤程式計算）】');
+  expect(system.match(/【流年 2030】/g)).toHaveLength(2);
+  expect(system).toContain('甲的大限四化落在乙盤：');
+  expect(system).toContain('不要自己推算那一年的四化');
   expect(messages).toHaveLength(1);
   expect(messages[0]!.content).toBe('如果這兩個人是伴侶，感情上怎麼互動？互補與容易摩擦的地方各是什麼？');
   for (const secret of ['小明', '阿華', '2000-8-16', '1995-7-7', FAKE_KEY]) expect(JSON.stringify(bodies[0])).not.toContain(secret);
@@ -138,4 +166,31 @@ test('從我的命盤進合盤', async ({ page }) => {
   await page.getByRole('link', { name: '用命盤「小明」合盤' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '合盤' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByLabel('甲', { exact: true }).locator('option:checked')).toContainText('小明');
+});
+
+test('合盤：選「不看運限」時，不顯示運限表，也不把運限交給 AI', async ({ page }) => {
+  const bodies: Body[] = [];
+  await page.addInitScript((key) => localStorage.setItem('ziwei:key:anthropic', key), FAKE_KEY);
+  await page.route('https://api.anthropic.com/**', async (route: Route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
+    bodies.push(route.request().postDataJSON() as Body);
+    return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'text/event-stream' }, body: sse('兩人互補。') });
+  });
+  await cast(page, MING);
+  await cast(page, HUA);
+  await page.getByRole('link', { name: '和另一張命盤合盤' }).click();
+  await page.getByLabel('乙', { exact: true }).selectOption({ label: '小明（女，國曆 2000 年 8 月 16 日）' });
+  await page.getByLabel('要看的年份').selectOption('');
+  await expect(page.getByText('沒有選年份，AI 只會拿到兩張本命盤與交互關係。')).toBeVisible();
+  await expect(page.getByRole('table', { name: /年的運限$/ })).toHaveCount(0);
+  // 可選的年份從兩人都出生之後開始
+  await expect(page.getByLabel('要看的年份').locator('option').nth(1)).toHaveText('2000 年');
+
+  const reading = page.locator('#reading-section');
+  await reading.getByRole('button', { name: '飛星互動' }).click();
+  await expect(reading.getByText('兩人互補。')).toBeVisible();
+  const { system } = bodies[0]!;
+  expect(system).toContain('【宮干飛化互入（由排盤程式計算）】');
+  expect(system).toContain('【運限】使用者這次沒有選年份');
+  expect(system).not.toContain('【流年');
 });
