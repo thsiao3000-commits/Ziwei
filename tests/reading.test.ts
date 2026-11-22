@@ -167,9 +167,27 @@ describe('系統提示詞', () => {
       for (const palace of quick.palaces) expect(names.has(palace), `${quick.label}：${palace}`).toBe(true);
     }
     expect(QUICK_PROMPTS.map((quick) => quick.label)).toEqual([
-      '命盤總論', '性格與天賦', '事業', '財運', '感情', '桃花與另一半', '健康留意', '目前大限', '今年流年',
+      '命盤總論', '性格與天賦', '事業', '財運', '投資性格摘要', '感情', '桃花與另一半', '健康留意', '目前大限', '今年流年',
     ]);
     expect(palacePrompt('官祿').message).toBe('請解讀我的官祿宮。');
+  });
+
+  it('投資性格摘要：分本命與運限兩段，只談行為傾向，運限只能更保守，不觸發自動附流年', () => {
+    const quick = QUICK_PROMPTS.find((item) => item.id === 'invest')!;
+    expect(quick.palaces).toEqual(['財帛', '福德', '命宮', '田宅']);
+    for (const text of [
+      '一、本命（長期適用）',
+      '二、目前大限與今年流年',
+      '請標明適用的歲數與年份',
+      '不談什麼時候適合買賣，不提任何標的或價位',
+      '只能讓規則更保守，不能當成放大部位的理由',
+      '以「可貼上的摘要」為標題',
+      '不含紫微術語',
+    ]) {
+      expect(quick.message).toContain(text);
+    }
+    // 訊息裡的四位數字會被當成年份、另外附上那一年的流年；這則提問靠的是系統提示詞裡今天的運限。
+    expect(mentionedYears(quick.message, 1900)).toEqual([]);
     expect(palacePrompt('命宮').message).toBe('請解讀我的命宮。');
   });
 });

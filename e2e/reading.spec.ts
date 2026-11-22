@@ -363,3 +363,23 @@ test('手機：輸入區不蓋到底部導覽列；表單欄位不小於 16px（
   );
   expect(small, '這些欄位的字級小於 16px').toEqual([]);
 });
+
+test('投資性格摘要：送出規定格式的提問，帶入財帛、福德、命宮、田宅的三方四正，不另附流年', async ({ page }) => {
+  const { bodies } = await setup(page);
+  await castChart(page);
+  const reading = panel(page);
+  await reading.getByRole('button', { name: '投資性格摘要' }).click();
+  await expect(reading.getByText('已帶入：財帛、福德、命宮、田宅')).toBeVisible();
+  await expect(reading.getByText('命宮紫微坐守，格局穩重。')).toBeVisible();
+
+  const { system, messages } = bodies[0]!;
+  const content = messages[0]!.content;
+  expect(content).toContain('請依這張盤整理一份「投資性格摘要」');
+  expect(content).toContain('只能讓規則更保守，不能當成放大部位的理由');
+  expect(content).toContain('以「可貼上的摘要」為標題');
+  expect(content).toContain('【三方四正】');
+  expect(content).toContain('田宅：');
+  // 運限靠系統提示詞裡今天的大限與流年，不另外附某一年。
+  expect(content).not.toContain('【流年 ');
+  expect(system).toContain('【目前運限】');
+});
