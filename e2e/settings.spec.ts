@@ -205,3 +205,28 @@ test('佈景主題、匯出不含金鑰、清除本站資料不動其他網站�
   expect(after.keys.filter((key) => key.startsWith('ziwei:key'))).toEqual([]);
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'dark');
 });
+
+test('新手使用指南：沒有金鑰時預設展開，六個步驟，連結通往對應頁面，可以收合', async ({ page }, testInfo) => {
+  await page.goto('./#/settings');
+  const guide = page.locator('details', { has: page.getByText('新手使用指南', { exact: true }) });
+  await expect(guide).toHaveAttribute('open', '');
+  await expect(guide.locator('ol > li')).toHaveCount(6);
+  await expect(guide.getByRole('heading', { level: 3, name: /第 3 步：\s*取得並貼上 API 金鑰/ })).toBeVisible();
+  await expect(guide.getByText('命盤由排盤程式計算，AI 只負責解讀，不會更動盤上的星曜。')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('guide.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+
+  await guide.locator('summary').click();
+  await expect(guide.locator('ol')).toBeHidden();
+  await guide.locator('summary').click();
+  await guide.getByRole('link', { name: '從命盤截圖帶入' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '從命盤截圖帶入' })).toBeVisible({ timeout: 30_000 });
+});
+
+test('新手使用指南：已經設定金鑰時預設收合', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ziwei:key:anthropic', 'fake-key-for-e2e-0000000000000-wxyz'));
+  await page.goto('./#/settings');
+  const guide = page.locator('details', { has: page.getByText('新手使用指南', { exact: true }) });
+  await expect(guide.locator('summary')).toBeVisible();
+  await expect(guide).not.toHaveAttribute('open', '');
+});

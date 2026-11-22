@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ChartSection } from '../features/settings/ChartSection';
+import { GuideSection } from '../features/settings/GuideSection';
 import { DataSection, KeyStorageChoice } from '../features/settings/DataSection';
 import { ModelSection, configuredProviders } from '../features/settings/ModelSection';
 import { ProviderSection } from '../features/settings/ProviderSection';
@@ -38,6 +39,11 @@ export function Settings() {
       <div className="flex flex-wrap items-baseline justify-between gap-x-6">
         <h1 className="text-[1.75rem] md:text-[2.25rem]">設定</h1>
         <SavedIndicator />
+      </div>
+
+      {/* 還沒有金鑰的人多半是第一次來：指南預設展開。 */}
+      <div className="mt-6">
+        <GuideSection defaultOpen={configured.length === 0} />
       </div>
 
       <section aria-labelledby="settings-keys" className="mt-8">
