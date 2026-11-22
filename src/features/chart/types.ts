@@ -188,6 +188,15 @@ export type Limits = {
   selection: LimitSelection;
 };
 
+/** 某一年的一個流月：名稱、國曆起日，以及疊在本命盤上的資料。 */
+export type MonthLimit = {
+  /** 例：正月、閏四月（前半） */
+  label: string;
+  /** 這個流月從國曆哪一天開始，YYYY-M-D */
+  solarStart: string;
+  limit: LimitInfo;
+};
+
 /** 定盤輔助：同一個生日換成某個時辰排出的盤。 */
 export type TimeCandidate = {
   timeIndex: number;

@@ -75,6 +75,7 @@ pnpm preview      # 以 /Ziwei/ 子路徑預覽 dist/
 - 設定頁的新手使用指南（`features/settings/GuideSection.tsx`）引用了按鈕與欄位名稱：改介面文字或新增主要功能時同步更新
 - 錯誤訊息說明發生什麼與怎麼處理
 - 不用宿命或聳動字眼，不用 emoji 當圖示
+- 流月財運一覽（`pages/Months.tsx`、`features/chart/months.ts`）是業主要求的傳統解讀：頁面與提問都要保留「傳統看法、沒有統計驗證」的說明，不提標的或價位，不把偏順的月份寫成可以放大部位
 - 名詞小辭典（`features/glossary/terms.ts`）：盤上會出現的宮名與星曜都要有條目（有測試檢查）；說明寫「傳統上怎麼看」，不寫成定論
 
 ## 工作方式

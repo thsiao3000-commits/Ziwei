@@ -17,6 +17,7 @@ import {
   type HoroscopeData,
   type LimitInfo,
   type Limits,
+  type MonthLimit,
   type LimitSelection,
   type Mutagen,
   type PalaceInfo,
@@ -318,11 +319,7 @@ export function computeLimits(input: BirthInput, settings: ChartSettings, select
       yearRange: [item.yearRange[0], item.yearRange[1]],
     })),
     years: yearList.map((item) => ({ year: item.year, age: item.age, stem: item.heavenlyStem, branch: item.earthlyBranch })),
-    months: monthList.map((item, index) => {
-      const name = LUNAR_MONTH_NAMES[item.month - 1] ?? `${item.month} 月`;
-      const part = item.part === 'first' ? '（前半）' : item.part === 'second' ? '（後半）' : '';
-      return { index, label: `${item.isLeapMonth ? '閏' : ''}${name}${part}`, stem: item.heavenlyStem, branch: item.earthlyBranch };
-    }),
+    months: monthList.map((item, index) => ({ index, label: monthLabel(item), stem: item.heavenlyStem, branch: item.earthlyBranch })),
     overlay: {
       decadal: decadalItem ? toLimit(astrolabe, decadalItem) : null,
       yearly: yearItem ? toLimit(astrolabe, yearItem) : null,
@@ -334,6 +331,34 @@ export function computeLimits(input: BirthInput, settings: ChartSettings, select
       month: monthItem ? selection.month : null,
     },
   };
+}
+
+/** 流月的名稱，例：正月、閏四月（前半）。 */
+function monthLabel(item: { month: number; isLeapMonth: boolean; part: 'normal' | 'first' | 'second' }): string {
+  const name = LUNAR_MONTH_NAMES[item.month - 1] ?? `${item.month} 月`;
+  const part = item.part === 'first' ? '（前半）' : item.part === 'second' ? '（後半）' : '';
+  return `${item.isLeapMonth ? '閏' : ''}${name}${part}`;
+}
+
+/**
+ * 某一個農曆年的所有流月（流月財運一覽用）：每個流月的名稱、國曆起日與疊宮資料。
+ * 國曆起日由 iztro 的農曆換算取得：用那一天當出生日排一張盤，讀它的國曆日期。
+ */
+export function computeMonths(input: BirthInput, settings: ChartSettings, year: number): MonthLimit[] {
+  computeChart(input, settings);
+  if (!Number.isInteger(year) || year < MIN_YEAR || year > MAX_YEAR) {
+    throw new ChartInputError('out_of_range', `年份請選 ${MIN_YEAR} 到 ${MAX_YEAR} 之間。`);
+  }
+  const astrolabe = build(input, settings, input.calendar === 'lunar' && input.isLeapMonth === true);
+  return astrolabe.monthlyList(year).map((item) => ({
+    label: monthLabel(item),
+    solarStart: build(
+      { name: '', gender: 'male', calendar: 'lunar', date: `${year}-${item.month}-${item.dayRange[0]}`, timeIndex: 6 },
+      {},
+      item.isLeapMonth,
+    ).solarDate,
+    limit: toLimit(astrolabe, item),
+  }));
 }
 
 export { daysInSolarMonth };

@@ -233,12 +233,15 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
           </h1>
           <DensityControl value={density} onChange={setDensity} />
         </div>
-        <p className="mb-3 text-sm">
+        <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
           <Link to={`/rectify/${saved.id}`} className="text-accent underline underline-offset-4">
             不確定出生時辰？比較相鄰時辰的命盤
           </Link>
-          <Link to={`/compare/${saved.id}`} className="ml-4 text-accent underline underline-offset-4">
+          <Link to={`/compare/${saved.id}`} className="text-accent underline underline-offset-4">
             和另一張命盤合盤
+          </Link>
+          <Link to={`/months/${saved.id}`} className="text-accent underline underline-offset-4">
+            流月財運一覽
           </Link>
         </p>
         <div className="w-full max-w-[820px]">

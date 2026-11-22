@@ -20,6 +20,7 @@ const router = createHashRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'chart/:chartId', lazy: () => import('./pages/Chart').then((module) => ({ Component: module.Chart })) },
+      { path: 'months/:chartId', lazy: () => import('./pages/Months').then((module) => ({ Component: module.Months })) },
       { path: 'rectify/:chartId', lazy: () => import('./pages/Rectify').then((module) => ({ Component: module.Rectify })) },
       { path: 'glossary/:term?', lazy: () => import('./pages/Glossary').then((module) => ({ Component: module.Glossary })) },
       { path: 'compare/:a?/:b?', lazy: () => import('./pages/Compare').then((module) => ({ Component: module.Compare })) },
