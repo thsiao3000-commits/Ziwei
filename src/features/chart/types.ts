@@ -194,6 +194,8 @@ export type MonthLimit = {
   label: string;
   /** 這個流月從國曆哪一天開始，YYYY-M-D */
   solarStart: string;
+  /** 這個流月到國曆哪一天為止（下一個流月開始的前一天），YYYY-M-D */
+  solarEnd: string;
   limit: LimitInfo;
 };
 

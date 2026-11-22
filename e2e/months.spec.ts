@@ -45,9 +45,11 @@ test('流月財運一覽：預設今年，十二個流月的落點由程式算�
 
   const table = page.getByRole('table', { name: '2026 年的流月' });
   await expect(table.locator('tbody tr')).toHaveCount(12);
-  await expect(table.getByRole('columnheader')).toHaveText(['流月', '國曆起日', '落在命財福田', '干支', '流月命宮落在', '化祿', '化權', '化科', '化忌']);
-  await expect(table.getByRole('row', { name: /^正月/ }).getByRole('cell')).toHaveText(['2026/2/17', '權入財帛', '庚寅', '財帛', '太陽 → 子女', '武曲 → 財帛', '太陰 → 僕役', '天同 → 疾厄']);
-  await expect(table.getByRole('row', { name: /^臘月/ })).toContainText('2027/1/8');
+  await expect(table.getByRole('columnheader')).toHaveText(['流月（農曆）', '國曆期間', '落在命財福田', '干支', '流月命宮落在', '化祿', '化權', '化科', '化忌']);
+  await expect(table.getByRole('row', { name: /^正月/ }).getByRole('cell')).toHaveText(['2026/2/17–3/18', '權入財帛', '庚寅', '財帛', '太陽 → 子女', '武曲 → 財帛', '太陰 → 僕役', '天同 → 疾厄']);
+  await expect(table.getByRole('row', { name: /^臘月/ })).toContainText('2027/1/8–2/5');
+  // 跨年的流月，訖日仍寫出年份。
+  await expect(table.getByRole('row', { name: /^冬月/ })).toContainText('2026/12/9–2027/1/7');
   await expect(table.getByRole('row', { name: /^八月/ }).getByRole('cell').nth(1)).toHaveText('沒有');
 
   // 有閏月的年份
@@ -89,8 +91,10 @@ test('流月財運一覽：請 AI 判讀時送出程式算好的流月表與那�
   expect(content).toContain('請看我 2026 年各流月的財運。');
   expect(content).toContain('沒有統計驗證');
   expect(content).toContain('不要提任何投資標的或價位');
-  expect(content).toContain('【2026 年各流月（由排盤程式計算；括號內是四化星所在的本命宮位）】');
-  expect(content).toContain('正月（國曆 2026/2/17 起）｜庚寅｜流月命宮落在本命財帛');
+  expect(content).toContain('【2026 農曆年各流月（由排盤程式計算；');
+  expect(content).toContain('農曆正月（國曆 2026/2/17–2026/3/18）｜庚寅｜流月命宮落在本命財帛');
+  expect(content).toContain('以「可貼上的流月過濾」為標題');
+  expect(content).toContain('國曆期間照補充資料逐字抄寫（含年份）');
   expect(content).toContain('【流年 2026】');
   for (const secret of ['小明', '2000-8-16', FAKE_KEY]) expect(JSON.stringify(bodies[0])).not.toContain(secret);
 });

@@ -4,7 +4,7 @@
  * 其他程式只拿這裡輸出的本站型別，不接觸 iztro 的物件。
  */
 import { astro, util, version as iztroVersion } from 'iztro';
-import { daysInSolarMonth } from './calendar';
+import { daysInSolarMonth, previousSolarDay } from './calendar';
 import {
   ChartInputError,
   MAX_YEAR,
@@ -341,8 +341,8 @@ function monthLabel(item: { month: number; isLeapMonth: boolean; part: 'normal' 
 }
 
 /**
- * 某一個農曆年的所有流月（流月財運一覽用）：每個流月的名稱、國曆起日與疊宮資料。
- * 國曆起日由 iztro 的農曆換算取得：用那一天當出生日排一張盤，讀它的國曆日期。
+ * 某一個農曆年的所有流月（流月財運一覽用）：每個流月的名稱、國曆起訖日與疊宮資料。
+ * 國曆日期由 iztro 的農曆換算取得：用那一天當出生日排一張盤，讀它的國曆日期。
  */
 export function computeMonths(input: BirthInput, settings: ChartSettings, year: number): MonthLimit[] {
   computeChart(input, settings);
@@ -350,13 +350,18 @@ export function computeMonths(input: BirthInput, settings: ChartSettings, year: 
     throw new ChartInputError('out_of_range', `年份請選 ${MIN_YEAR} 到 ${MAX_YEAR} 之間。`);
   }
   const astrolabe = build(input, settings, input.calendar === 'lunar' && input.isLeapMonth === true);
-  return astrolabe.monthlyList(year).map((item) => ({
+  /** 農曆某一天的國曆日期。 */
+  const toSolar = (lunarYear: number, month: number, day: number, isLeapMonth: boolean): string =>
+    build({ name: '', gender: 'male', calendar: 'lunar', date: `${lunarYear}-${month}-${day}`, timeIndex: 6 }, {}, isLeapMonth).solarDate;
+
+  const list = astrolabe.monthlyList(year);
+  const starts = list.map((item) => toSolar(year, item.month, item.dayRange[0], item.isLeapMonth));
+  // 最後一個流月到隔年正月初一的前一天為止。
+  const nextYearStart = toSolar(year + 1, 1, 1, false);
+  return list.map((item, index) => ({
     label: monthLabel(item),
-    solarStart: build(
-      { name: '', gender: 'male', calendar: 'lunar', date: `${year}-${item.month}-${item.dayRange[0]}`, timeIndex: 6 },
-      {},
-      item.isLeapMonth,
-    ).solarDate,
+    solarStart: starts[index] ?? '',
+    solarEnd: previousSolarDay(starts[index + 1] ?? nextYearStart),
     limit: toLimit(astrolabe, item),
   }));
 }

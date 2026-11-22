@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { computeChart, computeMonths } from '../features/chart/engine';
-import { focusText, monthRows, monthsMessage, monthYears, serializeMonths, slashDate } from '../features/chart/months';
+import { focusText, monthRows, monthsMessage, monthYears, serializeMonths, solarRangeShort } from '../features/chart/months';
 import { getChart } from '../features/chart/store';
 import { MAX_YEAR, type ChartData, type SavedChart } from '../features/chart/types';
 import { todayString } from '../features/reading/request';
@@ -124,7 +124,7 @@ export function Months() {
         <p className="mt-1 text-sm text-ink-muted">年份指農曆年；臘月會落在隔年的國曆一、二月。</p>
       </div>
       <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
-        國曆起日是農曆每個月的初一。流月的干支與四化取那一天的月干，而月干依節氣換月，和農曆月初通常差幾天到兩週；交界前後的日子請保守看待。
+        國曆期間是每個農曆月的初一到月底。流月的干支與四化取初一那一天的月干，而月干依節氣換月，和農曆月初通常差幾天到兩週；交界前後的日子請保守看待。
       </p>
       <div>
       </div>
@@ -135,7 +135,7 @@ export function Months() {
             <caption className="pb-2 text-left font-kai text-[1.125rem] font-bold">{year} 年的流月</caption>
             <thead>
               <tr className="border-b border-line text-left font-kai">
-                {['流月', '國曆起日', '落在命財福田', '干支', '流月命宮落在', '化祿', '化權', '化科', '化忌'].map((heading) => (
+                {['流月（農曆）', '國曆期間', '落在命財福田', '干支', '流月命宮落在', '化祿', '化權', '化科', '化忌'].map((heading) => (
                   <th key={heading} scope="col" className={`whitespace-nowrap ${th}`}>
                     {heading}
                   </th>
@@ -148,7 +148,7 @@ export function Months() {
                   <th scope="row" className="whitespace-nowrap py-1 pr-3 text-left font-kai font-bold">
                     {row.label}
                   </th>
-                  <td className={cell}>{slashDate(row.solarStart)}</td>
+                  <td className={cell}>{solarRangeShort(row)}</td>
                   {/* 最常看的一欄放前面：手機上不用橫向捲動就看得到。 */}
                   <td className={`${cell} font-bold`}>{focusText(row) || <span className="font-normal text-ink-muted">沒有</span>}</td>
                   <td className={cell}>{row.stemBranch}</td>
@@ -174,7 +174,7 @@ export function Months() {
           請 AI 判讀
         </h2>
         <p className="mt-2 max-w-[34em]">
-          AI 會依傳統看法，把每個流月標成「傳統上偏順」「傳統上偏保守」或「沒有明顯訊號」並寫出依據。上面這張表會一併送出；AI 不會提任何標的或價位。
+          AI 會依傳統看法，把每個流月標成「傳統上偏順」「傳統上偏保守」或「沒有明顯訊號」並寫出依據。上面這張表會一併送出；AI 不會提任何標的或價位。回覆最後會附一段「可貼上的流月過濾」，月份同時寫農曆月名與國曆期間，可以整段複製到投資工具的偏好欄位。
         </p>
         {hasKey ? (
           <button type="button" className="mt-3 rounded-control bg-accent px-4 py-2 font-kai font-bold text-accent-ink disabled:opacity-60" disabled={!rows} onClick={askAI}>
