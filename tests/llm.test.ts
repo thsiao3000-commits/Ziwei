@@ -582,8 +582,31 @@ describe('Groq provider', () => {
       if (last?.type !== 'error') continue;
       expect(last.message).toContain('每分鐘');
       expect(last.message).toContain('免費方案');
-      expect(last.message).not.toContain('請開新對話');
+      expect(last.message).not.toContain('對話太長');
     }
+  });
+
+  it('Groq 真實的額度訊息附了 billing 網址：不可誤判成帳務問題，並列出額度與用量', async () => {
+    const detail =
+      'Request too large for model `qwen/qwen3.8-27b` in organization `org_test` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Requested 11532, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing';
+    for (const status of [429, 413]) {
+      const { fetchImpl } = recorder(() => openaiError(status, 'rate_limit_exceeded', detail));
+      const last = (await collect(createGroqProvider(fetchImpl), groqRequest)).at(-1);
+      expect(last?.type).toBe('error');
+      if (last?.type !== 'error') continue;
+      expect(last.code).not.toBe('quota');
+      expect(last.message).toContain('每分鐘');
+      expect(last.message).toContain('額度 8000，這次需要 11532 token');
+      expect(last.message).not.toContain('帳務');
+    }
+  });
+
+  it('Groq 每天的額度用完：說明是每天的限制', async () => {
+    const { fetchImpl } = recorder(() =>
+      openaiError(429, 'rate_limit_exceeded', 'Rate limit reached on tokens per day (TPD): Limit 200000, Used 199000, Requested 5000. Upgrade at https://console.groq.com/settings/billing'),
+    );
+    const last = (await collect(createGroqProvider(fetchImpl), groqRequest)).at(-1);
+    expect(last?.type === 'error' && last.message).toContain('每天');
   });
 
   it('串流途中回報失敗（x_groq.error）', async () => {

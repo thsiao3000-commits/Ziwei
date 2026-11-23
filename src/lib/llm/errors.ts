@@ -18,6 +18,11 @@ export function classify(failure: ProviderFailure): ErrorCode {
   const text = `${kind} ${detail}`.toLowerCase();
 
   if (status === undefined) return 'blocked';
+  // 用量限制要先判斷：Groq 超過額度的訊息結尾附了升級方案的網址（…/settings/billing），
+  // 只看「billing」會把它誤判成帳務問題（v1.12.1 修正）。
+  const rateLimited = /rate_limit|tokens per (minute|day)|requests per (minute|day)/.test(text);
+  if (rateLimited && status === 413) return 'context_too_long';
+  if (rateLimited && status === 429 && !/insufficient_quota/.test(text)) return 'rate_limited';
   if (/insufficient_quota|billing|credit balance|payment/.test(text) || status === 402) return 'quota';
   if (/context_length|context window|prompt is too long|too many tokens|maximum context/.test(text) || status === 413) {
     return 'context_too_long';
@@ -32,12 +37,19 @@ export function classify(failure: ProviderFailure): ErrorCode {
 
 /** Groq 的每分鐘 token 額度很容易在附上整張命盤時用完，訊息裡要講清楚。 */
 const GROQ_TPM_HINT =
-  'Groq 會把「提問內容加上回覆上限」算進每分鐘的 token 額度；免費方案的額度很小，附上整張命盤的提問可能一次就超過。請等一分鐘再試、把詳略改成精簡，或到 Groq 主控台升級方案。';
+  'Groq 會把「提問內容加上回覆上限」算進每分鐘的 token 額度；免費方案的額度很小，附上整張命盤的提問可能一次就超過，追問會重送整段對話、更容易超過。請等一分鐘再試、開新對話、把詳略改成精簡，或到 Groq 主控台升級方案。';
 
 export function describe(provider: ProviderId, code: ErrorCode, failure: ProviderFailure = {}): string {
   const name = PROVIDER_NAMES[provider];
   if (provider === 'groq' && (code === 'rate_limited' || (code === 'context_too_long' && failure.status === 413))) {
-    return `${name} 回覆 ${failure.status ?? ''}：超過每分鐘的用量限制。${GROQ_TPM_HINT}`;
+    const detail = failure.detail ?? '';
+    // Groq 的訊息會寫額度與這次的用量，例如「Limit 8000, Requested 11532」；有就照實列出。
+    const numbers = /Limit (\d+), Requested (\d+)/.exec(detail);
+    const usage = numbers ? `（額度 ${numbers[1]}，這次需要 ${numbers[2]} token）` : '';
+    if (/per day|\bTPD\b|\bRPD\b/i.test(detail)) {
+      return `${name} 回覆 ${failure.status ?? ''}：超過每天的用量限制${usage}。今天的額度已經用完，請明天再試、改用另一家供應商，或到 Groq 主控台升級方案。`;
+    }
+    return `${name} 回覆 ${failure.status ?? ''}：超過每分鐘的用量限制${usage}。${GROQ_TPM_HINT}`;
   }
   const status = failure.status === undefined ? '' : ` ${failure.status}`;
   switch (code) {
