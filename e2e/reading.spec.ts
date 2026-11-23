@@ -384,12 +384,12 @@ test('投資性格摘要：送出規定格式的提問，帶入財帛、福德�
   expect(system).toContain('【目前運限】');
 });
 
-test('流月財運：快捷提問排在投資性格摘要後面，附上程式算好的今年流月與流年，要求輸出可貼上的流月過濾', async ({ page }) => {
+test('流月財運：快捷提問排在投資性格摘要前面，附上程式算好的今年流月與流年，要求輸出可貼上的流月過濾', async ({ page }) => {
   const { bodies } = await setup(page);
   await castChart(page);
   const reading = panel(page);
   const labels = await reading.locator('.chip-row').first().getByRole('button').allTextContents();
-  expect(labels.indexOf('流月財運')).toBe(labels.indexOf('投資性格摘要') + 1);
+  expect(labels).toEqual(['命盤總論', '今年流年', '目前大限', '事業', '財運', '感情', '桃花與另一半', '性格與天賦', '健康留意', '流月財運', '投資性格摘要']);
 
   const year = new Date().getFullYear();
   await reading.getByRole('button', { name: '流月財運', exact: true }).click();
@@ -466,4 +466,22 @@ test('快捷提問：平板、摺疊手機橫向與電腦換行、全部看得�
     expect(fits, `${width}×${height}`).toBe(wraps);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   }
+});
+
+test('手機上快捷提問的右緣淡出，提示右邊還有按鈕；滑到底就取消；平板以上換行、不淡出', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', '這個測試自己設定視窗大小');
+  await page.setViewportSize({ width: 393, height: 852 });
+  await setup(page);
+  await castChart(page);
+  const row = page.locator('.chip-fade:visible').first();
+  const mask = () => row.evaluate((el) => getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage);
+  expect(await mask()).toContain('linear-gradient');
+  await row.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+  await expect.poll(mask).toBe('none');
+  await row.evaluate((el) => el.scrollTo({ left: 0 }));
+  await expect.poll(mask).toContain('linear-gradient');
+  if (process.env.SHOT_DIR) await row.screenshot({ path: `${process.env.SHOT_DIR}/chip-fade.png` });
+
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await expect.poll(mask).toBe('none');
 });

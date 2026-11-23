@@ -180,7 +180,8 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
       {
         id: 'months',
         label: '流月財運',
-        afterId: 'invest',
+        // 排在「投資性格摘要」前面（接在健康留意後面）。
+        afterId: 'health',
         run: () => {
           const rows = monthRows(chart, computeMonths(saved.input, saved.chartSettings, year));
           void send(monthsMessage(year), { palaces: [] }, { extra: serializeMonths(year, rows) });

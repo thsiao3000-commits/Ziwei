@@ -78,11 +78,12 @@ export const INVEST_PROFILE_MESSAGE = [
 ].join('\n');
 
 export const QUICK_PROMPTS: readonly QuickPrompt[] = [
+  // 順序依使用頻率（v1.14.0）：手機上這一排是左右滑動的，排後面的比較不容易被看到。
   { id: 'overview', label: '命盤總論', message: '請幫我看整張命盤的重點。', palaces: ['命宮'] },
-  { id: 'character', label: '性格與天賦', message: '從這張盤看，我的性格特質與天賦是什麼？', palaces: ['命宮', '福德'] },
+  { id: 'yearly', label: '今年流年', message: '今年的流年要留意什麼？請用流年四化、流曜與流年命宮來看。', palaces: [] },
+  { id: 'decadal', label: '目前大限', message: '我目前這個大限的重點是什麼？請用大限四化與大限命宮來看。', palaces: [] },
   { id: 'career', label: '事業', message: '我的事業發展如何？適合什麼樣的工作方式？', palaces: ['官祿', '命宮', '財帛', '遷移'] },
   { id: 'wealth', label: '財運', message: '我的財運與理財傾向如何？', palaces: ['財帛', '福德', '田宅'] },
-  { id: 'invest', label: '投資性格摘要', message: INVEST_PROFILE_MESSAGE, palaces: ['財帛', '福德', '命宮', '田宅'] },
   { id: 'love', label: '感情', message: '我的感情與婚姻傾向如何？', palaces: ['夫妻', '福德', '命宮'] },
   {
     id: 'partner',
@@ -90,9 +91,9 @@ export const QUICK_PROMPTS: readonly QuickPrompt[] = [
     message: '我的桃花運如何？另一半容易有哪些特質？請從夫妻宮、桃花星曜與相關的飛化來看。',
     palaces: ['夫妻', '福德', '命宮', '遷移'],
   },
+  { id: 'character', label: '性格與天賦', message: '從這張盤看，我的性格特質與天賦是什麼？', palaces: ['命宮', '福德'] },
   { id: 'health', label: '健康留意', message: '健康方面有哪些值得留意的地方？', palaces: ['疾厄', '命宮', '福德'] },
-  { id: 'decadal', label: '目前大限', message: '我目前這個大限的重點是什麼？請用大限四化與大限命宮來看。', palaces: [] },
-  { id: 'yearly', label: '今年流年', message: '今年的流年要留意什麼？請用流年四化、流曜與流年命宮來看。', palaces: [] },
+  { id: 'invest', label: '投資性格摘要', message: INVEST_PROFILE_MESSAGE, palaces: ['財帛', '福德', '命宮', '田宅'] },
 ];
 
 /** 選中宮位時多出來的快捷提問。 */

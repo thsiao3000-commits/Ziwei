@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { recommendedModels } from '../../lib/llm/models.config';
 import { formatUSD } from '../../lib/llm/pricing';
@@ -36,6 +36,32 @@ function useElapsedSeconds(startedAt: number | null): number {
     return () => window.clearInterval(timer);
   }, [startedAt]);
   return startedAt === null ? 0 : Math.max(0, Math.floor((now - startedAt) / 1000));
+}
+
+/**
+ * 快捷提問那一排。手機上左右滑動：還有按鈕在右邊時右緣淡出，捲到底（或根本不用捲）時標上
+ * data-at-end 取消淡出。淡出的樣式在 chart.css 的 .chip-fade。
+ */
+function QuickRow({ labelledBy, count, children }: { labelledBy: string; count: number; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => el.toggleAttribute('data-at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      observer.disconnect();
+    };
+  }, [count]);
+  return (
+    <div ref={ref} className="chip-row chip-fade" role="group" aria-labelledby={labelledBy}>
+      {children}
+    </div>
+  );
 }
 
 function UserBubble({ message }: { message: UserMessage }) {
@@ -452,7 +478,7 @@ export function ReadingPanel({
         <p className="sr-only" id={`${id}-quick`}>
           快捷提問
         </p>
-        <div className="chip-row" role="group" aria-labelledby={`${id}-quick`}>
+        <QuickRow labelledBy={`${id}-quick`} count={quicks.length + quickActions.length}>
           {quicks.map((quick) => (
             <Fragment key={quick.id}>
               <button type="button" className="chip" disabled={busy} onClick={() => submit(quick.message, quick)}>
@@ -467,7 +493,7 @@ export function ReadingPanel({
                 ))}
             </Fragment>
           ))}
-        </div>
+        </QuickRow>
       </div>
 
       {reading.problem && (

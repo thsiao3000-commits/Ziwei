@@ -167,7 +167,7 @@ describe('系統提示詞', () => {
       for (const palace of quick.palaces) expect(names.has(palace), `${quick.label}：${palace}`).toBe(true);
     }
     expect(QUICK_PROMPTS.map((quick) => quick.label)).toEqual([
-      '命盤總論', '性格與天賦', '事業', '財運', '投資性格摘要', '感情', '桃花與另一半', '健康留意', '目前大限', '今年流年',
+      '命盤總論', '今年流年', '目前大限', '事業', '財運', '感情', '桃花與另一半', '性格與天賦', '健康留意', '投資性格摘要',
     ]);
     expect(palacePrompt('官祿').message).toBe('請解讀我的官祿宮。');
   });
