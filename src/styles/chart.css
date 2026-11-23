@@ -475,6 +475,14 @@
   font-size: 0.9em;
 }
 
+/* 程式碼區塊（例如「可貼上的流月過濾」）：一行很長時要換行，不可以把整段對話撐得比螢幕寬。
+   換行只是顯示，複製出來的文字不會多出換行。 */
+.reading-prose pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .reading-prose table {
   position: relative;
   display: block;

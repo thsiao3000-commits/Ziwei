@@ -477,7 +477,7 @@ export function ReadingPanel({
       )}
 
       {(messages.length > 0 || pending) && (
-        <div className="grid gap-6" aria-label="對話內容">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6" aria-label="對話內容">
           {messages.map((message, index) =>
             message.role === 'user' ? (
               <UserBubble key={index} message={message} />

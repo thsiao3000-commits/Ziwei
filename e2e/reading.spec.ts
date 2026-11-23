@@ -34,7 +34,7 @@ const REPLIES = [
   '2030 年是庚戌年，流年命宮在官祿。',
 ];
 
-async function setup(page: Page, options: { failAt?: number } = {}) {
+async function setup(page: Page, options: { failAt?: number; replies?: string[] } = {}) {
   const bodies: Body[] = [];
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
@@ -61,7 +61,7 @@ async function setup(page: Page, options: { failAt?: number } = {}) {
         body: JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'prompt is too long: 1200000 tokens > 1000000 maximum' } }),
       });
     }
-    return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'text/event-stream' }, body: anthropicSse(REPLIES[index] ?? '好的。') });
+    return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'text/event-stream' }, body: anthropicSse((options.replies ?? REPLIES)[index] ?? '好的。') });
   });
   return { bodies, requests };
 }
@@ -404,3 +404,43 @@ test('流月財運：快捷提問排在投資性格摘要後面，附上程式�
   expect(content).toContain('以「可貼上的流月過濾」為標題');
   expect(content).toContain(`【流年 ${year}】`);
 });
+
+// 業主在 iPhone Duo 橫向發現的問題（v1.13.1）：回覆裡的程式碼區塊有一行很長時，整段對話被撐得比螢幕寬，
+// 連提問的文字也跟著超出畫面。手機、摺疊手機、平板、電腦的尺寸都要檢查。
+const WIDE_REPLY = [
+  '這是紫微斗數的傳統看法。',
+  '| 流月 | 國曆期間 | 判斷 | 依據 |\n|---|---|---|---|\n| 正月 | 2/6–3/7 | 傳統上偏順 | 流月化祿入財帛宮，流月命宮落在福德宮，三方四正會照祿存與天馬，沒有化忌沖入 |',
+  '## 可貼上的流月過濾',
+  '```\n【流月過濾｜2027 農曆年｜紫微斗數傳統看法，無統計驗證】\n偏順：農曆正月（國曆 2/6–3/7）、農曆三月（國曆 4/7–5/5）、農曆六月（國曆 7/4–8/1）、農曆九月（國曆 9/30–10/28）、農曆十一月（國曆 11/28–12/27）\n用法：只有原本的分析已到加碼價，而且當天落在偏順的國曆期間，才加碼；否則縮小或延後。減碼與停損不受此限制。\n```',
+].join('\n\n');
+
+for (const [width, height] of [
+  [393, 852],
+  [466, 678],
+  [669, 951],
+  [951, 669],
+  [820, 1180],
+  [1180, 820],
+  [1440, 900],
+] as const) {
+  test(`回覆裡有很長的程式碼區塊與表格：對話不超出畫面（${width}×${height}）`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', '這個測試自己設定視窗大小');
+    await page.setViewportSize({ width, height });
+    await setup(page, { replies: [WIDE_REPLY] });
+    await castChart(page);
+    await page.locator('textarea:visible').last().fill('請看我 2027 年各流月的財運。'.repeat(8));
+    await page.getByRole('button', { name: '送出提問' }).last().click();
+    await expect(page.getByRole('button', { name: '複製回覆' }).last()).toBeVisible();
+
+    const result = await page.evaluate(() => {
+      const root = document.documentElement;
+      // 橫向捲動列（快捷提問）與表格本來就會在自己的框裡捲動，不算。
+      const outside = [...document.querySelectorAll<HTMLElement>('[aria-label="對話內容"] *')]
+        .filter((el) => el.offsetParent !== null && !el.closest('table') && el.getBoundingClientRect().right > root.clientWidth + 1)
+        .map((el) => el.tagName);
+      return { scrollWidth: root.scrollWidth, clientWidth: root.clientWidth, outside };
+    });
+    expect(result.outside).toEqual([]);
+    expect(result.scrollWidth).toBeLessThanOrEqual(result.clientWidth);
+  });
+}
