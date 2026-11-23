@@ -67,6 +67,13 @@ export async function listCharts(): Promise<SavedChart[]> {
   return charts.sort((a, b) => Number(b.pinned === true) - Number(a.pinned === true) || recent(b).localeCompare(recent(a)));
 }
 
+/** 最近開啟的幾張命盤：只看最後開啟（沒開過就用建立時間），不管有沒有釘選。 */
+export async function recentCharts(limit: number): Promise<SavedChart[]> {
+  const charts = await (await getDB()).getAll('charts');
+  const recent = (chart: SavedChart) => chart.openedAt ?? chart.createdAt;
+  return charts.sort((a, b) => recent(b).localeCompare(recent(a))).slice(0, limit);
+}
+
 /** 刪除命盤與它的所有對話（含用到這張盤的合盤對話）。 */
 export async function deleteChart(id: string): Promise<void> {
   const db = await getDB();

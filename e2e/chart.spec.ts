@@ -158,3 +158,51 @@ test('開啟不存在的命盤時說明原因', async ({ page }) => {
   await page.goto('./#/chart/doesnotexist00000');
   await expect(page.getByRole('heading', { level: 1, name: '找不到這張命盤' })).toBeVisible();
 });
+
+test('首頁列出最近開啟的命盤，寬螢幕放在右邊', async ({ page }, testInfo) => {
+  await page.goto('./');
+  // 還沒有命盤時不顯示這一區。
+  await expect(page.getByRole('group', { name: '示範命盤' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '最近開啟的命盤' })).toHaveCount(0);
+
+  for (const name of ['小明', '小華']) {
+    await page.goto('./');
+    await fillForm(page);
+    await page.getByLabel('稱呼').fill(name);
+    await page.getByRole('button', { name: '排出命盤' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: `${name}的命盤` })).toBeVisible();
+  }
+
+  await page.goto('./');
+  const recent = page.getByRole('region', { name: '最近開啟的命盤' });
+  // 最後開啟的排最前面；生日用使用者輸入的曆法顯示。
+  await expect(recent.getByRole('listitem')).toHaveCount(2);
+  await expect(recent.getByRole('listitem').first()).toContainText('小華');
+  await expect(recent.getByRole('listitem').first()).toContainText('國曆 2000 年 8 月 16 日');
+  await expect(recent.getByRole('link', { name: '看全部命盤' })).toBeVisible();
+
+  if (testInfo.project.name === 'desktop') {
+    const form = page.getByRole('region', { name: '排出命盤' });
+    const demo = page.getByRole('region', { name: '示範命盤' });
+    const box = async (locator: typeof recent) => (await locator.boundingBox())!;
+
+    // 1920px：第三欄，在示範命盤右邊、和它同一列。
+    await page.setViewportSize({ width: 1920, height: 1000 });
+    expect((await box(recent)).x).toBeGreaterThan((await box(demo)).x + (await box(demo)).width);
+    expect(Math.abs((await box(recent)).y - (await box(demo)).y)).toBeLessThan(4);
+    await page.screenshot({ path: testInfo.outputPath('home-recent-1920.png') });
+
+    // 1440px：放不下第三欄，改放在表單下方，示範命盤的位置不變。
+    await page.setViewportSize({ width: 1440, height: 900 });
+    expect(Math.abs((await box(recent)).x - (await box(form)).x)).toBeLessThan(4);
+    expect((await box(recent)).y).toBeGreaterThan((await box(form)).y + (await box(form)).height - 1);
+    expect(Math.abs((await box(demo)).y - (await box(form)).y)).toBeLessThan(4);
+    await page.screenshot({ path: testInfo.outputPath('home-recent-1440.png'), fullPage: true });
+  } else {
+    await page.screenshot({ path: testInfo.outputPath('home-recent-mobile.png'), fullPage: true });
+  }
+
+  // 點稱呼直接進命盤頁。
+  await recent.getByRole('link', { name: '小明' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '小明的命盤' })).toBeVisible();
+});

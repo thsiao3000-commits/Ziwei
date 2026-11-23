@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { BirthForm } from '../features/chart/BirthForm';
 import { CentreInfo } from '../features/chart/CentreInfo';
 import { ChartBoard } from '../features/chart/ChartBoard';
 import { useEngine } from '../features/chart/engineLoader';
-import { saveChart } from '../features/chart/store';
-import { DEFAULT_CHART_SETTINGS, type BirthInput } from '../features/chart/types';
+import { formatSolarDate } from '../features/chart/layout';
+import { recentCharts, saveChart } from '../features/chart/store';
+import { timeSlotLabel } from '../features/chart/time';
+import { DEFAULT_CHART_SETTINGS, type BirthInput, type SavedChart } from '../features/chart/types';
 import { defaultDensity } from '../features/settings/preferences';
 import { useSettings } from '../features/settings/store';
 
@@ -18,6 +20,14 @@ const DEMO_INPUT: BirthInput = {
   timeIndex: 2,
 };
 
+const RECENT_LIMIT = 5;
+
+/** 清單上的生日直接用使用者輸入的那一種曆法，不必等排盤模組載入。 */
+function birthdayText(input: BirthInput): string {
+  const calendar = input.calendar === 'solar' ? '國曆' : `農曆${input.isLeapMonth ? '（閏月）' : ''}`;
+  return `${calendar} ${formatSolarDate(input.date)}　${timeSlotLabel(input.timeIndex)}`;
+}
+
 export function Home() {
   const navigate = useNavigate();
   // 排盤模組在背景載入；載入前先保留示範命盤的位置，版面不會跳動。
@@ -26,6 +36,20 @@ export function Home() {
   const [selected, setSelected] = useState<number | null>(null);
   const [density] = useState(defaultDensity);
 
+  // 最近開啟的命盤：讀不到就不顯示，不擋排盤。
+  const [recent, setRecent] = useState<SavedChart[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    recentCharts(RECENT_LIMIT)
+      .then((charts) => {
+        if (!cancelled) setRecent(charts);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function handleSubmit(input: BirthInput) {
     const saved = await saveChart(input, useSettings.getState().chartDefaults);
     // 出生資料不進網址：只帶本機隨機 id。
@@ -33,8 +57,9 @@ export function Home() {
   }
 
   return (
-    <div className="grid gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-12 xl:grid-cols-[minmax(0,30rem)_minmax(0,720px)]">
-      <section aria-labelledby="home-title">
+    // 寬螢幕（1800px 以上）第三欄放「最近開啟的命盤」；窄一點放在表單下方，手機排在表單與示範命盤之間。
+    <div className="grid gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:grid-rows-[auto_1fr] md:gap-x-12 xl:grid-cols-[minmax(0,30rem)_minmax(0,720px)] 3xl:grid-cols-[minmax(0,30rem)_minmax(0,720px)_minmax(0,24rem)]">
+      <section aria-labelledby="home-title" className="md:col-start-1 md:row-start-1">
         <h1 id="home-title" className="text-[1.75rem] md:text-[2.25rem]">
           排出命盤
         </h1>
@@ -57,7 +82,30 @@ export function Home() {
         </p>
       </section>
 
-      <section aria-labelledby="demo-title" className="w-full max-w-[720px]">
+      {recent.length > 0 && (
+        <section aria-labelledby="recent-title" className="md:col-start-1 md:row-start-2 3xl:col-start-3 3xl:row-start-1">
+          <h2 id="recent-title" className="text-[1.125rem]">
+            最近開啟的命盤
+          </h2>
+          <ul className="mt-2 max-w-[34em] border-t border-line-soft">
+            {recent.map((saved) => (
+              <li key={saved.id} className="border-b border-line-soft py-2">
+                <Link to={`/chart/${saved.id}`} className="font-kai text-[1.0625rem] font-bold text-accent underline underline-offset-4">
+                  {saved.input.name}
+                </Link>
+                <p className="text-sm text-ink-muted">{birthdayText(saved.input)}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm">
+            <Link to="/charts" className="text-accent underline underline-offset-4">
+              看全部命盤
+            </Link>
+          </p>
+        </section>
+      )}
+
+      <section aria-labelledby="demo-title" className="w-full max-w-[720px] md:col-start-2 md:row-span-2 md:row-start-1 3xl:row-span-1">
         <h2 id="demo-title" className="text-[1.125rem]">
           示範命盤
         </h2>
