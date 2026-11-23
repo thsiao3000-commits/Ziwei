@@ -1,10 +1,11 @@
-export type ProviderId = 'openai' | 'anthropic';
+export type ProviderId = 'openai' | 'anthropic' | 'groq';
 
-export const PROVIDER_IDS: readonly ProviderId[] = ['openai', 'anthropic'];
+export const PROVIDER_IDS: readonly ProviderId[] = ['openai', 'anthropic', 'groq'];
 
 export const PROVIDER_NAMES: Record<ProviderId, string> = {
   openai: 'OpenAI',
   anthropic: 'Claude（Anthropic）',
+  groq: 'Groq',
 };
 
 /** 推理深度。undefined 表示不送參數，使用供應商預設值。 */
@@ -59,6 +60,8 @@ export type ModelInfo = {
   note?: string;
   /** 這個模型接受的推理深度；null 表示不知道（照送，被拒再移除） */
   efforts: readonly Effort[] | null;
+  /** 明確知道這個模型不能讀圖時為 false（截圖匯入會先提醒）；沒寫表示可以或不知道 */
+  vision?: boolean;
 };
 
 /** 可替換的 fetch，測試時用來餵模擬回應。 */

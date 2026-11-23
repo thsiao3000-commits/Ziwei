@@ -28,7 +28,7 @@ export type PricingTable = {
 export const PRICING_PATH = '/BenchAI-Support/pricing.json';
 export const PRICING_PAGE_PATH = '/BenchAI-Support/pricing.html';
 
-/** 內嵌後備表：只留本站會呼叫的 OpenAI 與 Anthropic 模型。對照日期見 updated_at。 */
+/** 內嵌後備表：只留本站推薦清單裡的模型。對照日期見 updated_at。 */
 export const PRICING_FALLBACK: PricingTable = {
   schema_version: 1,
   updated_at: '2026-11-19',
@@ -41,6 +41,8 @@ export const PRICING_FALLBACK: PricingTable = {
     'claude-opus-5-5': { input: 4, output: 20 },
     'claude-sonnet-5-5': { input: 2, output: 10 },
     'claude-haiku-5-5': { input: 0.1, output: 0.5, long_context: { threshold: 100_000, input: 0.5, output: 2.5 } },
+    'openai/gpt-oss-120b': { input: 0.15, output: 0.6 },
+    'qwen/qwen3.8-27b': { input: 0.8, output: 4 },
   },
 };
 

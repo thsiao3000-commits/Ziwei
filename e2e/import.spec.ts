@@ -4,7 +4,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 // 假字串，不是任何真實金鑰。虛構的測試生日。
 const FAKE_KEY = 'fake-key-for-e2e-0000000000000-wxyz';
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' };
-const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com']);
+const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com', 'api.groq.com']);
 // 一張 1×1 的 PNG，當成使用者選的「命盤截圖」。
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 
@@ -59,7 +59,7 @@ async function pick(page: Page) {
 
 test('沒有金鑰時引導到設定，並說明可以手動輸入', async ({ page }) => {
   await page.goto('./#/import');
-  await expect(page.getByText('讀圖需要 AI，請先設定你自己的 OpenAI 或 Claude API 金鑰。')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('讀圖需要 AI，請先設定你自己的 OpenAI、Claude 或 Groq API 金鑰。')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByLabel('命盤的截圖或照片')).toHaveCount(0);
 });
 

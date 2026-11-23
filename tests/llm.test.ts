@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { createAnthropicProvider } from '../src/lib/llm/anthropic';
+import { createGroqProvider } from '../src/lib/llm/groq';
+import { cannotReadImages } from '../src/lib/llm/models.config';
 import { createOpenAIProvider } from '../src/lib/llm/openai';
 import { filterChatModels, isChatModelId } from '../src/lib/llm/openai-filter';
 import { LLMError, type ChatRequest, type FetchLike, type LLMProvider, type StreamEvent } from '../src/lib/llm/types';
@@ -485,6 +487,183 @@ describe('OpenAI provider', () => {
   it('模型列表失敗時丟出帶代碼的錯誤', async () => {
     const { fetchImpl } = recorder(() => openaiError(401, 'invalid_api_key', 'Incorrect API key provided'));
     await expect(createOpenAIProvider(fetchImpl).listModels(FAKE_KEY)).rejects.toMatchObject({ code: 'invalid_key' });
+  });
+});
+
+// ────────────────────────────── Groq ──────────────────────────────
+
+const groqRequest: ChatRequest = {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  system: '你是解盤助手。命盤資料：……',
+  messages: HISTORY,
+};
+
+const groqChunk = (delta: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
+  id: 'chatcmpl-1',
+  object: 'chat.completion.chunk',
+  created: 1_790_000_000,
+  model: 'openai/gpt-oss-120b',
+  choices: [{ index: 0, delta, finish_reason: null }],
+  ...extra,
+});
+
+/** Groq 的串流：推理走 delta.reasoning，用量放在最後一個 chunk 的 x_groq.usage。 */
+function groqStream(finishReason = 'stop', withReasoning = true): [string, unknown][] {
+  const chunks: unknown[] = [groqChunk({ role: 'assistant', content: '' })];
+  if (withReasoning) chunks.push(groqChunk({ reasoning: '先看官祿宮。' }));
+  chunks.push(groqChunk({ content: '官祿宮' }), groqChunk({ content: '廉貞天府。' }));
+  chunks.push({
+    ...groqChunk({}),
+    choices: [{ index: 0, delta: {}, finish_reason: finishReason }],
+    x_groq: { id: 'req_1', usage: { prompt_tokens: 210, completion_tokens: 66, total_tokens: 276 } },
+  });
+  return chunks.map((chunk) => ['message', chunk]);
+}
+
+describe('Groq provider', () => {
+  it('正常串流：推演中 → 文字 → 完成與用量；走 Groq 的 OpenAI 相容端點', async () => {
+    const { calls, fetchImpl } = recorder(() => sse(groqStream()));
+    const events = await collect(createGroqProvider(fetchImpl), groqRequest);
+
+    expect(events[0]).toEqual({ type: 'status', state: 'thinking' });
+    expect(text(events)).toBe('官祿宮廉貞天府。');
+    // 推理內容不可混進回覆。
+    expect(text(events)).not.toContain('先看官祿宮');
+    expect(events.at(-1)).toEqual({ type: 'done', usage: { inputTokens: 210, outputTokens: 66 } });
+
+    const call = calls[0]!;
+    expect(call.url).toBe('https://api.groq.com/openai/v1/chat/completions');
+    expect(call.headers.get('authorization')).toBe(`Bearer ${FAKE_KEY}`);
+    expect(JSON.stringify(call.body)).not.toContain(FAKE_KEY);
+    expect(call.body?.messages).toEqual([{ role: 'system', content: groqRequest.system }, ...HISTORY]);
+    expect(call.body?.stream).toBe(true);
+    expect(call.body?.max_completion_tokens).toBe(4096);
+    for (const key of ['reasoning_effort', 'reasoning_format', 'temperature', 'top_p', 'max_tokens']) {
+      expect(call.body).not.toHaveProperty(key);
+    }
+  });
+
+  it('選了推理深度才送 reasoning_effort；只有 Qwen 另外要求隱藏推理內容', async () => {
+    const oss = recorder(() => sse(groqStream()));
+    await collect(createGroqProvider(oss.fetchImpl), { ...groqRequest, effort: 'high' });
+    expect(oss.calls[0]?.body?.reasoning_effort).toBe('high');
+    expect(oss.calls[0]?.body).not.toHaveProperty('reasoning_format');
+
+    const qwen = recorder(() => sse(groqStream()));
+    await collect(createGroqProvider(qwen.fetchImpl), { ...groqRequest, model: 'qwen/qwen3.8-27b', effort: 'low' });
+    expect(qwen.calls[0]?.body?.reasoning_effort).toBe('low');
+    expect(qwen.calls[0]?.body?.reasoning_format).toBe('hidden');
+  });
+
+  it('推理深度被拒：移除參數重試一次並提示', async () => {
+    const { calls, fetchImpl } = recorder((_call, index) =>
+      index === 0 ? openaiError(400, 'invalid_request_error', '`reasoning_effort` is not supported with this model', 'reasoning_effort') : sse(groqStream()),
+    );
+    const events = await collect(createGroqProvider(fetchImpl), { ...groqRequest, effort: 'high' });
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.body).not.toHaveProperty('reasoning_effort');
+    expect(events[0]?.type).toBe('notice');
+    expect(text(events)).toBe('官祿宮廉貞天府。');
+  });
+
+  it('到達長度上限：標記 truncated', async () => {
+    const { fetchImpl } = recorder(() => sse(groqStream('length')));
+    const events = await collect(createGroqProvider(fetchImpl), groqRequest);
+    expect(events.at(-1)).toEqual({ type: 'done', truncated: true, usage: { inputTokens: 210, outputTokens: 66 } });
+  });
+
+  it('超過每分鐘 token 額度（429 或 413）：說明是 Groq 的用量限制，不是對話太長', async () => {
+    for (const status of [429, 413]) {
+      const { fetchImpl } = recorder(() => openaiError(status, 'rate_limit_exceeded', 'Request too large for model on tokens per minute (TPM): Limit 8000, Requested 9500'));
+      const events = await collect(createGroqProvider(fetchImpl), groqRequest);
+      const last = events.at(-1);
+      expect(last?.type).toBe('error');
+      if (last?.type !== 'error') continue;
+      expect(last.message).toContain('每分鐘');
+      expect(last.message).toContain('免費方案');
+      expect(last.message).not.toContain('請開新對話');
+    }
+  });
+
+  it('串流途中回報失敗（x_groq.error）', async () => {
+    const { fetchImpl } = recorder(() =>
+      sse([['message', groqChunk({ content: '官祿宮' })], ['message', { ...groqChunk({}), x_groq: { error: 'over_capacity' } }]]),
+    );
+    const events = await collect(createGroqProvider(fetchImpl), groqRequest);
+    expect(text(events)).toBe('官祿宮');
+    expect(events.at(-1)).toMatchObject({ type: 'error', code: 'overloaded' });
+  });
+
+  it('串流中途中斷：保留已收到的文字，最後回報連線問題', async () => {
+    const { fetchImpl } = recorder(() => sse(groqStream(), { breakAfter: 3 }));
+    const events = await collect(createGroqProvider(fetchImpl), groqRequest);
+    expect(text(events)).toBe('官祿宮');
+    expect(events.at(-1)).toMatchObject({ type: 'error', code: 'blocked' });
+  });
+
+  it('請求沒有送達 → blocked', async () => {
+    const fetchImpl: FetchLike = async () => {
+      throw new TypeError('Failed to fetch');
+    };
+    const events = await collect(createGroqProvider(fetchImpl), groqRequest);
+    expect(events.at(-1)).toMatchObject({ type: 'error', code: 'blocked' });
+  });
+
+  it('使用者按停止：不回報錯誤', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { fetchImpl } = recorder(() => sse(groqStream()));
+    const events = await collect(createGroqProvider(fetchImpl), groqRequest, controller.signal);
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
+  });
+
+  it('模型列表：過濾語音與審查模型、停用的模型，推薦在前', async () => {
+    const data = [
+      { id: 'whisper-large-v3', created: 1_700_000_000, active: true },
+      { id: 'qwen/qwen3.8-27b', created: 1_790_000_000, active: true },
+      { id: 'meta-llama/llama-guard-4-12b', created: 1_760_000_000, active: true },
+      { id: 'llama-3.3-70b-versatile', created: 1_750_000_000, active: true },
+      { id: 'old-model', created: 1_740_000_000, active: false },
+      { id: 'openai/gpt-oss-120b', created: 1_770_000_000, active: true },
+    ].map((model) => ({ ...model, object: 'model', owned_by: 'x' }));
+    const { calls, fetchImpl } = recorder(() => json(200, { object: 'list', data }));
+    const models = await createGroqProvider(fetchImpl).listModels(FAKE_KEY);
+    expect(calls[0]?.url).toBe('https://api.groq.com/openai/v1/models');
+    expect(models.map((m) => m.id)).toEqual(['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'llama-3.3-70b-versatile']);
+    expect(models[0]).toMatchObject({ recommended: true, tier: '$', vision: false });
+  });
+
+  it('模型列表失敗時丟出帶代碼的錯誤', async () => {
+    const { fetchImpl } = recorder(() => openaiError(401, 'invalid_api_key', 'Invalid API Key'));
+    await expect(createGroqProvider(fetchImpl).listModels(FAKE_KEY)).rejects.toMatchObject({ code: 'invalid_key' });
+  });
+
+  it('讀圖：圖片以 data URL 送到 chat completions；GPT-OSS 標示為不能讀圖', async () => {
+    const { calls, fetchImpl } = recorder(() =>
+      json(200, {
+        id: 'chatcmpl-2',
+        object: 'chat.completion',
+        created: 1_790_000_000,
+        model: 'qwen/qwen3.8-27b',
+        choices: [{ index: 0, message: { role: 'assistant', content: '{"year":2000}' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 2100, completion_tokens: 20, total_tokens: 2120 },
+      }),
+    );
+    const result = await createGroqProvider(fetchImpl).readImage(
+      FAKE_KEY,
+      { model: 'qwen/qwen3.8-27b', system: '系統', prompt: '讀出生資料', image: { mediaType: 'image/jpeg', base64: 'AAAA' } },
+      new AbortController().signal,
+    );
+    expect(result).toEqual({ text: '{"year":2000}', usage: { inputTokens: 2100, outputTokens: 20 } });
+    const content = (calls[0]?.body?.messages as { content: unknown }[])[1]?.content;
+    expect(content).toEqual([
+      { type: 'text', text: '讀出生資料' },
+      { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,AAAA' } },
+    ]);
+    expect(cannotReadImages('groq', 'openai/gpt-oss-120b')).toBe(true);
+    expect(cannotReadImages('groq', 'qwen/qwen3.8-27b')).toBe(false);
+    expect(cannotReadImages('openai', 'gpt-6.2-sol')).toBe(false);
   });
 });
 

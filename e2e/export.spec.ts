@@ -4,7 +4,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 // 假字串，不是任何真實金鑰。虛構的測試生日。
 const FAKE_KEY = 'fake-key-for-e2e-0000000000000-wxyz';
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' };
-const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com']);
+const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com', 'api.groq.com']);
 
 function sse(text: string): string {
   const events: [string, unknown][] = [

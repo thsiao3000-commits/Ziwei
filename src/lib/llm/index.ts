@@ -21,7 +21,9 @@ export function getProvider(id: ProviderId): Promise<LLMProvider> {
     const loading =
       id === 'anthropic'
         ? import('./anthropic').then((module) => module.createAnthropicProvider())
-        : import('./openai').then((module) => module.createOpenAIProvider());
+        : id === 'groq'
+          ? import('./groq').then((module) => module.createGroqProvider())
+          : import('./openai').then((module) => module.createOpenAIProvider());
     // 不管瀏覽器給的錯誤訊息長什麼樣，動態載入失敗一律視為同一種情況。
     provider = loading.catch(() => {
       throw new ModuleLoadError();

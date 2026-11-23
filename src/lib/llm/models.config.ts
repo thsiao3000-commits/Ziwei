@@ -2,16 +2,17 @@ import type { Effort, ModelInfo, ProviderId } from './types';
 
 /**
  * 推薦模型清單。模型 ID 只寫在這個檔案，元件不直接寫 ID（CLAUDE.md）。
- * 對照官方文件的日期：2026-11-21。
+ * 對照官方文件的日期：2026-11-21（Groq：2026-11-23）。
  * - OpenAI：https://developers.openai.com/api/docs/models
  * - Anthropic：https://platform.claude.com/docs/en/models/overview
+ * - Groq：https://console.groq.com/docs/models
  *
  * 用途：下拉選單的中文定位說明與預設值；動態列表抓不到時當後備。
  * 價格只標級距，實際價格以供應商為準。
  */
 const ALL_EFFORTS: readonly Effort[] = ['low', 'medium', 'high'];
 
-type Recommended = Pick<ModelInfo, 'id' | 'displayName' | 'tier' | 'note' | 'efforts'>;
+type Recommended = Pick<ModelInfo, 'id' | 'displayName' | 'tier' | 'note' | 'efforts' | 'vision'>;
 
 const RECOMMENDED: Record<ProviderId, readonly Recommended[]> = {
   openai: [
@@ -26,12 +27,18 @@ const RECOMMENDED: Record<ProviderId, readonly Recommended[]> = {
     { id: 'claude-opus-5-5', displayName: 'Claude Opus 5.5', tier: '$$$', note: '官方建議的一般預設', efforts: ALL_EFFORTS },
     { id: 'claude-haiku-5-5', displayName: 'Claude Haiku 5.5', tier: '$', note: '最快、最省', efforts: ALL_EFFORTS },
   ],
+  // Groq 託管的開源模型。GPT-OSS 只收文字；Qwen3.8 是 Preview，可以讀圖。
+  groq: [
+    { id: 'openai/gpt-oss-120b', displayName: 'GPT-OSS 120B', tier: '$', note: '開源模型，速度快、最省；不能讀圖', efforts: ALL_EFFORTS, vision: false },
+    { id: 'qwen/qwen3.8-27b', displayName: 'Qwen3.8 27B', tier: '$$', note: '開源模型（預覽版），可以讀圖', efforts: ALL_EFFORTS },
+  ],
 };
 
 /** 本站預設：使用者自付費用，解盤不需要最貴的模型（HANDOFF 第 5.1 節）。 */
 export const DEFAULT_MODEL: Record<ProviderId, string> = {
   openai: 'gpt-6.2-sol',
   anthropic: 'claude-sonnet-5-5',
+  groq: 'openai/gpt-oss-120b',
 };
 
 export function recommendedModels(provider: ProviderId): ModelInfo[] {
@@ -74,6 +81,11 @@ export function mergeWithRecommended(provider: ProviderId, listed: readonly List
     }))
     .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || a.id.localeCompare(b.id));
   return [...recommended, ...others];
+}
+
+/** 明確知道這個模型不能讀圖（截圖匯入用）。不在清單裡的模型一律當成可以，交給供應商回報。 */
+export function cannotReadImages(provider: ProviderId, modelId: string): boolean {
+  return findRecommended(provider, modelId)?.vision === false;
 }
 
 /** 這個模型已知接受的推理深度；不在任何清單裡時回傳 null（不知道）。 */

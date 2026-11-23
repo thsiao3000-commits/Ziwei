@@ -7,7 +7,7 @@ const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers
 
 type Seen = { url: string; headers: Record<string, string> };
 
-/** 模擬兩家供應商的 API。真實金鑰的煙霧測試由業主手動執行。 */
+/** 模擬三家供應商的 API。真實金鑰的煙霧測試由業主手動執行。 */
 async function mockProviders(page: Page, options: { anthropicStatus?: number } = {}) {
   const seen: Seen[] = [];
   const handle = (body: (route: Route) => { status: number; json: unknown }) => async (route: Route) => {
@@ -48,11 +48,24 @@ async function mockProviders(page: Page, options: { anthropicStatus?: number } =
       data: ['gpt-6.2-sol', 'gpt-image-2', 'gpt-6-luna'].map((id, index) => ({ id, created: 1790000000 + index, object: 'model', owned_by: 'openai' })),
     },
   })));
+  await page.route('https://api.groq.com/**', handle(() => ({
+    status: 200,
+    json: {
+      object: 'list',
+      data: ['qwen/qwen3.8-27b', 'whisper-large-v3', 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile'].map((id, index) => ({
+        id,
+        created: 1790000000 + index,
+        object: 'model',
+        owned_by: 'groq',
+        active: true,
+      })),
+    },
+  })));
   return seen;
 }
 
 function providerSection(page: Page, name: string) {
-  return page.getByTestId(name === 'OpenAI' ? 'provider-openai' : 'provider-anthropic');
+  return page.getByTestId(name === 'OpenAI' ? 'provider-openai' : name === 'Groq' ? 'provider-groq' : 'provider-anthropic');
 }
 
 test('沒有金鑰時：狀態為未設定，模型區說明排盤仍可使用', async ({ page }, testInfo) => {
@@ -265,4 +278,47 @@ test('寬螢幕的設定頁：指南三段並排、設定區分左右兩欄，�
   // 1100：維持單欄
   await page.setViewportSize({ width: 1100, height: 900 });
   expect((await box(chart)).y).toBeGreaterThan((await box(keys)).y + 200);
+});
+
+test('Groq：舊版存下來的設定沒有 Groq 也能開；測試連線只連 api.groq.com，預設用 GPT-OSS 120B', async ({ page }) => {
+  const seen = await mockProviders(page);
+  // v1.11 以前存下來的設定：以供應商為鍵的欄位只有兩家。
+  await page.addInitScript(() => {
+    if (localStorage.getItem('ziwei:settings')) return;
+    localStorage.setItem(
+      'ziwei:settings',
+      JSON.stringify({
+        state: {
+          theme: 'system',
+          keyStorage: 'local',
+          defaultProvider: null,
+          model: { openai: 'gpt-6.2-sol', anthropic: 'claude-sonnet-5-5' },
+          customModel: { openai: '', anthropic: '' },
+          effort: 'default',
+          verbosity: 'standard',
+          includeBirthDate: false,
+          keyStatus: { openai: { state: 'unset' }, anthropic: { state: 'unset' } },
+        },
+        version: 0,
+      }),
+    );
+  });
+  await page.goto('./#/settings');
+  await expect(page.getByTestId('key-status-groq')).toHaveText('未設定');
+
+  const groq = providerSection(page, 'Groq');
+  await groq.getByLabel('API 金鑰').fill(FAKE_KEY);
+  await groq.getByLabel('API 金鑰').press('Enter');
+  await groq.getByRole('button', { name: '測試連線' }).click();
+  // 語音模型不列入。
+  await expect(groq.getByText('連線成功，可用模型 3 個。')).toBeVisible();
+  await expect(page.getByText('目前提問會用：Groq 的「openai/gpt-oss-120b」。')).toBeVisible();
+
+  expect(seen.length).toBeGreaterThan(0);
+  for (const call of seen) {
+    expect(new URL(call.url).hostname).toBe('api.groq.com');
+    expect(call.url).not.toContain(FAKE_KEY);
+    expect(call.headers.authorization).toBe(`Bearer ${FAKE_KEY}`);
+  }
+  expect(await page.evaluate(() => localStorage.getItem('ziwei:key:groq'))).toBe(FAKE_KEY);
 });

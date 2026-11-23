@@ -3,7 +3,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 // 假字串，不是任何真實金鑰。虛構的測試生日。
 const FAKE_KEY = 'fake-key-for-e2e-0000000000000-wxyz';
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' };
-const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com']);
+const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com', 'api.groq.com']);
 
 type Body = { model: string; system: string; messages: { role: string; content: string }[]; stream?: boolean };
 
@@ -86,7 +86,7 @@ function panel(page: Page) {
 test('沒有金鑰時：命盤可用，解讀面板引導到設定', async ({ page }) => {
   await castChart(page);
   const reading = panel(page);
-  await expect(reading.getByText('需要先設定你自己的 OpenAI 或 Claude API 金鑰')).toBeVisible();
+  await expect(reading.getByText('需要先設定你自己的 OpenAI、Claude 或 Groq API 金鑰')).toBeVisible();
   await reading.getByRole('link', { name: '前往設定' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '設定' })).toBeVisible();
 });

@@ -12,6 +12,7 @@ import { effectiveModel, useSettings } from '../features/settings/store';
 import { recordUsage } from '../features/settings/usage';
 import { ImageError, prepareImage, type PreparedImage } from '../lib/image';
 import { getProvider, ModuleLoadError } from '../lib/llm';
+import { cannotReadImages } from '../lib/llm/models.config';
 import { estimateCostUSD, formatUSD, loadPricing } from '../lib/llm/pricing';
 import { LLMError, PROVIDER_NAMES } from '../lib/llm/types';
 
@@ -179,7 +180,7 @@ export function Import() {
       <div className="min-w-0">
       {!provider ? (
         <div className="mt-6 max-w-[34em] border-l-2 border-line pl-3">
-          <p>讀圖需要 AI，請先設定你自己的 OpenAI 或 Claude API 金鑰。沒有金鑰也可以在排盤頁手動輸入出生資料。</p>
+          <p>讀圖需要 AI，請先設定你自己的 OpenAI、Claude 或 Groq API 金鑰。沒有金鑰也可以在排盤頁手動輸入出生資料。</p>
           <p className="mt-3">
             <Link to="/settings" className="inline-block rounded-control bg-accent px-4 py-2 font-kai font-bold text-accent-ink">
               前往設定
@@ -224,8 +225,13 @@ export function Import() {
               <p className="mt-2 max-w-[34em] border-l-2 border-line pl-3">
                 按下按鈕後，這張圖會由你的瀏覽器直接送給 {PROVIDER_NAMES[provider]}（模型：{model}），並依該供應商的政策處理。圖上的姓名、生日與整張命盤都會一併送出；本站沒有伺服器會收到它。
               </p>
+              {cannotReadImages(provider, model) && (
+                <p role="alert" className="mt-3 max-w-[34em] border-l-2 border-danger pl-3 text-danger">
+                  目前選的模型「{model}」只收文字，不能讀圖。請到設定頁換一個可以讀圖的模型（例如 Groq 的 Qwen3.8 27B），或改用另一家供應商。
+                </p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <button type="button" className="rounded-control bg-accent px-4 py-2 font-kai font-bold text-accent-ink disabled:opacity-60" disabled={reading} onClick={() => void read()}>
+                <button type="button" className="rounded-control bg-accent px-4 py-2 font-kai font-bold text-accent-ink disabled:opacity-60" disabled={reading || cannotReadImages(provider, model)} onClick={() => void read()}>
                   {reading ? '讀取中' : '把圖片送給 AI 讀取出生資料'}
                 </button>
                 {reading && (

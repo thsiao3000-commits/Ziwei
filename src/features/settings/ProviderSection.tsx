@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { getProvider } from '../../lib/llm';
-import { LLMError, PROVIDER_NAMES, type ProviderId } from '../../lib/llm/types';
+import { LLMError, PROVIDER_IDS, PROVIDER_NAMES, type ProviderId } from '../../lib/llm/types';
 import { clearKey, getKey, maskKey, setKey } from './keys';
 import { useModelLists, useSettings, type KeyStatus } from './store';
 import { buttonClass, fieldClass } from './ui';
@@ -9,6 +9,7 @@ import { buttonClass, fieldClass } from './ui';
 const KEY_PAGES: Record<ProviderId, string> = {
   openai: 'https://platform.openai.com/api-keys',
   anthropic: 'https://platform.claude.com/settings/keys',
+  groq: 'https://console.groq.com/keys',
 };
 
 const STATUS_TEXT: Record<KeyStatus['state'], string> = {
@@ -84,8 +85,8 @@ export function ProviderSection({ provider }: { provider: ProviderId }) {
     setKeyStatus(provider, { state: 'unset' });
     setList(provider, undefined);
     if (defaultProvider === provider) {
-      const other: ProviderId = provider === 'openai' ? 'anthropic' : 'openai';
-      update({ defaultProvider: getKey(other) ? other : null });
+      const other = PROVIDER_IDS.find((item) => item !== provider && getKey(item) !== null);
+      update({ defaultProvider: other ?? null });
     }
     setNotice('金鑰已從這台裝置清除。');
   }
@@ -163,6 +164,12 @@ export function ProviderSection({ provider }: { provider: ProviderId }) {
         </div>
       )}
 
+      {provider === 'groq' && (
+        <p className="mt-3 max-w-[34em] text-sm text-ink-muted">
+          Groq 託管的是開源模型（GPT-OSS、Qwen 等）。免費方案每分鐘可用的 token 很少，附上整張命盤的提問可能一次就超過而被拒；常用的話建議在 Groq 主控台升級方案。
+        </p>
+      )}
+
       <div aria-live="polite" className="mt-3 min-h-[1.9em]">
         {shown.state === 'verified' && <p>連線成功，可用模型 {shown.modelCount} 個。</p>}
         {shown.state === 'failed' && <p className="border-l-2 border-danger pl-3 text-danger">{shown.message}</p>}
@@ -176,7 +183,7 @@ export function ProviderSection({ provider }: { provider: ProviderId }) {
         <span className="text-ink-muted">（另開分頁）</span>
       </p>
       <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
-        金鑰只存在這台裝置的瀏覽器，本站沒有伺服器會收到它。提問時，你的瀏覽器會把金鑰直接送給 OpenAI 或 Anthropic。
+        金鑰只存在這台裝置的瀏覽器，本站沒有伺服器會收到它。提問時，你的瀏覽器會把金鑰直接送給你選的那一家供應商（OpenAI、Anthropic 或 Groq）。
       </p>
     </section>
   );

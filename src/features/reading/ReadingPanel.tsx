@@ -242,7 +242,7 @@ export function ReadingPanel({
         <h2 id={headingId} className="text-[1.5rem]">
           {title}
         </h2>
-        <p className="mt-3">要請 AI 依這張盤回答問題，需要先設定你自己的 OpenAI 或 Claude API 金鑰。命盤本身不需要金鑰就能完整使用。</p>
+        <p className="mt-3">要請 AI 依這張盤回答問題，需要先設定你自己的 OpenAI、Claude 或 Groq API 金鑰。命盤本身不需要金鑰就能完整使用。</p>
         <p className="mt-3">
           <Link to="/settings" className="inline-block rounded-control bg-accent px-4 py-2 font-kai font-bold text-accent-ink">
             前往設定

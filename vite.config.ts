@@ -12,7 +12,7 @@ const BASE = '/Ziwei/';
 /**
  * GitHub Pages 不能自訂回應標頭，CSP 以 <meta> 下達（HANDOFF 第 7.8、9 節）。
  * 只在建置時注入：開發伺服器的熱更新需要行內腳本與 WebSocket，會被這份政策擋下。
- * 對外連線只允許兩家 AI 供應商；腳本、字型、圖片只允許本站。
+ * 對外連線只允許三家 AI 供應商；腳本、字型、圖片只允許本站。
  */
 const CSP = [
   "default-src 'self'",
@@ -20,7 +20,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
   "img-src 'self'",
-  "connect-src 'self' https://api.openai.com https://api.anthropic.com",
+  "connect-src 'self' https://api.openai.com https://api.anthropic.com https://api.groq.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

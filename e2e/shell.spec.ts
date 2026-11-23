@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com']);
+const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com', 'api.groq.com']);
 
 test('空殼可在子路徑下開啟，導覽與重新整理都正常', async ({ page }, testInfo) => {
   const offSite: string[] = [];
@@ -59,11 +59,11 @@ test('空殼可在子路徑下開啟，導覽與重新整理都正常', async ({
   expect(consoleErrors, '主控台不得有錯誤（含 CSP 違規）').toEqual([]);
 });
 
-test('建置產物帶有 CSP，只允許本站與兩家 AI 供應商', async ({ page }) => {
+test('建置產物帶有 CSP，只允許本站與三家 AI 供應商', async ({ page }) => {
   await page.goto('./');
   const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
   expect(csp).toContain("script-src 'self'");
-  expect(csp).toContain("connect-src 'self' https://api.openai.com https://api.anthropic.com");
+  expect(csp).toContain("connect-src 'self' https://api.openai.com https://api.anthropic.com https://api.groq.com");
   expect(csp).not.toMatch(/script-src[^;]*unsafe/);
 
   // CSP 真的在執行：連到未列入的主機會被擋下。

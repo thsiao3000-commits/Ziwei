@@ -5,6 +5,7 @@ import type { SavedChart } from '../chart/types';
 import type { Conversation } from '../reading/types';
 import { usePreferences, type Density } from './preferences';
 import { DEFAULT_SETTINGS, pickSettings, useSettings, type SettingsData } from './store';
+import { PROVIDER_IDS, type ProviderId } from '../../lib/llm/types';
 
 /**
  * 匯出與匯入全部資料。匯出檔不含 API 金鑰，也不含金鑰的驗證狀態。
@@ -117,18 +118,18 @@ export async function restoreBackup(backup: Backup): Promise<number> {
     effort: EFFORTS.includes(s.effort ?? '') ? s.effort : current.effort,
     verbosity: VERBOSITIES.includes(s.verbosity ?? '') ? s.verbosity : current.verbosity,
     includeBirthDate: typeof s.includeBirthDate === 'boolean' ? s.includeBirthDate : current.includeBirthDate,
-    model: {
-      openai: typeof s.model?.openai === 'string' ? s.model.openai : current.model.openai,
-      anthropic: typeof s.model?.anthropic === 'string' ? s.model.anthropic : current.model.anthropic,
-    },
-    customModel: {
-      openai: typeof s.customModel?.openai === 'string' ? s.customModel.openai : DEFAULT_SETTINGS.customModel.openai,
-      anthropic:
-        typeof s.customModel?.anthropic === 'string' ? s.customModel.anthropic : DEFAULT_SETTINGS.customModel.anthropic,
-    },
+    // 逐一檢查每一家；舊版的備份檔沒有後來才加的供應商，沿用目前的設定。
+    model: perProvider((provider) => (typeof s.model?.[provider] === 'string' ? s.model[provider] : current.model[provider])),
+    customModel: perProvider((provider) =>
+      typeof s.customModel?.[provider] === 'string' ? s.customModel[provider] : DEFAULT_SETTINGS.customModel[provider],
+    ),
   });
 
   const density = backup.preferences.density;
   if (density && DENSITY_VALUES.includes(density)) usePreferences.getState().setDensity(density);
   return backup.charts.length;
+}
+
+function perProvider(pick: (provider: ProviderId) => string): Record<ProviderId, string> {
+  return Object.fromEntries(PROVIDER_IDS.map((provider) => [provider, pick(provider)])) as Record<ProviderId, string>;
 }

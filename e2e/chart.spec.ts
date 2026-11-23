@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com']);
+const ALLOWED_HOSTS = new Set(['127.0.0.1', 'api.openai.com', 'api.anthropic.com', 'api.groq.com']);
 
 // 虛構的測試生日（iztro 文件範例），不是任何人的真實資料。
 const BIRTH = { name: '小明', year: '2000', month: '8', day: '16', clock: '04:10' };

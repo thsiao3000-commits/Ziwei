@@ -42,11 +42,11 @@ export const DEFAULT_SETTINGS: SettingsData = {
   keyStorage: 'local',
   defaultProvider: null,
   model: { ...DEFAULT_MODEL },
-  customModel: { openai: '', anthropic: '' },
+  customModel: { openai: '', anthropic: '', groq: '' },
   effort: 'default',
   verbosity: 'standard',
   includeBirthDate: false,
-  keyStatus: { openai: { state: 'unset' }, anthropic: { state: 'unset' } },
+  keyStatus: { openai: { state: 'unset' }, anthropic: { state: 'unset' }, groq: { state: 'unset' } },
   chartDefaults: { ...DEFAULT_CHART_SETTINGS },
   school: 'sanhe',
   customPerspective: '',
@@ -77,6 +77,17 @@ export const useSettings = create<SettingsState>()(
       name: prefixed('settings'),
       storage: createJSONStorage(() => window.localStorage),
       partialize: (state): SettingsData => pickSettings(state),
+      // 以供應商為鍵的設定要逐一補上預設值：舊版存下來的資料沒有後來才加的供應商（例如 Groq）。
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<SettingsData>;
+        return {
+          ...current,
+          ...saved,
+          model: { ...current.model, ...saved.model },
+          customModel: { ...current.customModel, ...saved.customModel },
+          keyStatus: { ...current.keyStatus, ...saved.keyStatus },
+        };
+      },
     },
   ),
 );

@@ -7,7 +7,7 @@
 - Vite ＋ React ＋ TypeScript strict ＋ Tailwind，hash 路由。**純前端靜態網站，沒有後端**
 - 部署在 GitHub Pages 的子路徑（`/<repo 名稱>/`），與業主的其他網站同網域（`HANDOFF.md` 第 7.8 節）
 - 排盤用 `iztro`，在瀏覽器端計算
-- 使用者自帶 OpenAI 或 Anthropic 金鑰；出生資料與金鑰只存在瀏覽器，提問時由瀏覽器直連供應商
+- 使用者自帶 OpenAI、Anthropic 或 Groq 金鑰；出生資料與金鑰只存在瀏覽器，提問時由瀏覽器直連供應商
 - 解讀是多輪對話，支援追問（`HANDOFF.md` 第 6.5 節）
 - 介面只有繁體中文（臺灣用語）
 - 進度：`HANDOFF.md` 第 11 節的 M0–M5 已完成並部署；「之後」的項目也全部完成（定盤輔助、匯出、名詞小辭典、合盤、截圖匯入），第 2 節的 CR-01 到 CR-17 都做完了
@@ -33,7 +33,7 @@ pnpm preview      # 以 /Ziwei/ 子路徑預覽 dist/
 
 1. **AI 不排盤。** 星曜位置、四化、運限一律由 `features/chart/engine.ts` 計算。不要讓模型推算或修改命盤資料。截圖匯入也一樣：模型只讀出圖上印的出生資料給使用者核對，圖上的星曜不匯入。
 2. **資料留在本機。** 不寫任何伺服器端程式（含 serverless function），不接後端服務。出生資料、稱呼、金鑰不進網址；金鑰不進匯出檔、測試程式與 repo。
-3. **只連兩個主機。** 對外請求只能到 `api.openai.com` 與 `api.anthropic.com`，並用 CSP 強制。不要為了繞過 CORS 加代理；遇到直連被擋，回報業主。同網域的 `/BenchAI-Support/pricing.json`（業主自己的模型價格表）是同源請求，不算對外；一律用同源路徑去抓，不要寫成完整網址。
+3. **只連三個主機。** 對外請求只能到 `api.openai.com`、`api.anthropic.com` 與 `api.groq.com`（Groq 是業主在 v1.12.0 要求加入的），並用 CSP 強制。要再加主機必須由業主決定。不要為了繞過 CORS 加代理；遇到直連被擋，回報業主。同網域的 `/BenchAI-Support/pricing.json`（業主自己的模型價格表）是同源請求，不算對外；一律用同源路徑去抓，不要寫成完整網址。
 4. **不憑記憶寫 API。** 模型 ID、SDK 版本、請求參數都先對照官方文件或套件型別定義（`HANDOFF.md` 第 13 節）。
 5. **Markdown 不渲染原始 HTML。**
 6. **只有 `engine.ts` 可以 import `iztro`。** 日期用字串傳遞，不經過 `Date`。
@@ -47,6 +47,7 @@ pnpm preview      # 以 /Ziwei/ 子路徑預覽 dist/
 - 下拉選單來源：動態列表 → 推薦清單後備 → 使用者自訂 ID
 - 預設不送思考或取樣參數；參數被拒時移除後重試一次
 - 用官方 SDK（`@anthropic-ai/sdk`、`openai`）的瀏覽器模式，用到時才載入；測試用真的 SDK、只換掉 `fetch`
+- Groq（`lib/llm/groq.ts`）走 OpenAI 相容的 Chat Completions，沿用 `openai` 套件、只換 base URL（Groq 官方文件的做法）。它和另外兩家不同的地方：一定要送 `max_completion_tokens`（Groq 會把它算進每分鐘額度）、推理走 `delta.reasoning`、串流用量在 `x_groq.usage`、GPT-OSS 不能讀圖
 
 ## 送給模型的資料
 

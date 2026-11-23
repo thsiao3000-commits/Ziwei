@@ -76,7 +76,8 @@ describe('設定', () => {
   it('有填自訂模型 ID 時優先使用', () => {
     expect(effectiveModel(DEFAULT_SETTINGS, 'anthropic')).toBe('claude-sonnet-5-5');
     expect(effectiveModel(DEFAULT_SETTINGS, 'openai')).toBe('gpt-6.2-sol');
-    const custom = { ...DEFAULT_SETTINGS, customModel: { openai: '  gpt-next  ', anthropic: '' } };
+    const custom = { ...DEFAULT_SETTINGS, customModel: { openai: '  gpt-next  ', anthropic: '', groq: '' } };
+    expect(effectiveModel(DEFAULT_SETTINGS, 'groq')).toBe('openai/gpt-oss-120b');
     expect(effectiveModel(custom, 'openai')).toBe('gpt-next');
   });
 
