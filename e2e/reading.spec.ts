@@ -198,7 +198,7 @@ test('解讀這個宮位、開新對話、重新命名與刪除', async ({ page 
 
   await reading.getByRole('button', { name: '開新對話' }).click();
   await expect(reading.getByLabel('對話內容').getByText('請解讀我的官祿宮。')).toHaveCount(0);
-  await reading.getByRole('button', { name: '財運' }).click();
+  await reading.getByRole('button', { name: '財運', exact: true }).click();
   await expect(reading.getByText('事業看官祿宮廉貞天府。')).toBeVisible();
   // 新對話不帶舊對話的訊息。
   expect(bodies[1]!.messages).toHaveLength(1);
@@ -312,7 +312,7 @@ test('費用依線上價格表計算（同源的 pricing.json），查無費率�
   await expect(reading.getByText(/輸入 1,234、輸出 321 token\s+約 US\$0\.044/)).toBeVisible();
 
   await reading.getByLabel('模型').selectOption('claude-haiku-5-5');
-  await reading.getByRole('button', { name: '財運' }).click();
+  await reading.getByRole('button', { name: '財運', exact: true }).click();
   await expect(reading.getByText(/claude-haiku-5-5\s+輸入 1,234、輸出 321 token\s+費率未知/)).toBeVisible();
   // 價格表只抓一次。
   expect(pricingRequests).toBe(1);
@@ -382,4 +382,25 @@ test('投資性格摘要：送出規定格式的提問，帶入財帛、福德�
   // 運限靠系統提示詞裡今天的大限與流年，不另外附某一年。
   expect(content).not.toContain('【流年 ');
   expect(system).toContain('【目前運限】');
+});
+
+test('流月財運：快捷提問排在投資性格摘要後面，附上程式算好的今年流月與流年，要求輸出可貼上的流月過濾', async ({ page }) => {
+  const { bodies } = await setup(page);
+  await castChart(page);
+  const reading = panel(page);
+  const labels = await reading.locator('.chip-row').first().getByRole('button').allTextContents();
+  expect(labels.indexOf('流月財運')).toBe(labels.indexOf('投資性格摘要') + 1);
+
+  const year = new Date().getFullYear();
+  await reading.getByRole('button', { name: '流月財運', exact: true }).click();
+  await expect(reading.getByText(`已帶入：${year} 年流月、${year} 年流年`)).toBeVisible();
+  await expect(reading.getByText('命宮紫微坐守，格局穩重。')).toBeVisible();
+
+  const content = bodies[0]!.messages[0]!.content;
+  expect(content).toContain(`請看我 ${year} 年各流月的財運`);
+  expect(content).toContain(`【${year} 農曆年各流月（由排盤程式計算`);
+  expect(content).toMatch(/農曆正月（國曆 \d{4}\/\d+\/\d+–\d{4}\/\d+\/\d+）/);
+  expect(content).toContain('沒有統計驗證');
+  expect(content).toContain('以「可貼上的流月過濾」為標題');
+  expect(content).toContain(`【流年 ${year}】`);
 });

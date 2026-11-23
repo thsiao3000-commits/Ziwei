@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
 import { recommendedModels } from '../../lib/llm/models.config';
 import { formatUSD } from '../../lib/llm/pricing';
@@ -172,11 +172,15 @@ type Props = {
   attachedLimits: string | null;
   /** 換掉預設的快捷提問（合盤用） */
   quickPrompts?: readonly QuickPrompt[];
+  /** 需要另外附上程式算好的資料才能送出的快捷提問（例如流月財運）；排在 afterId 那一則後面 */
+  quickActions?: readonly QuickAction[];
   /** 面板標題，預設「解讀」 */
   title?: string;
   /** 送出說明裡「命盤內容」的說法，預設是單一命盤 */
   subject?: string;
 };
+
+export type QuickAction = { id: string; label: string; afterId: string; run: () => void };
 
 const PERSPECTIVES: readonly School[] = ['sanhe', 'feixing', 'panel', 'custom'];
 
@@ -192,6 +196,7 @@ export function ReadingPanel({
   onPerspectiveChange,
   attachedLimits,
   quickPrompts,
+  quickActions = [],
   title = '解讀',
   subject = '命盤內容',
 }: Props) {
@@ -257,6 +262,14 @@ export function ReadingPanel({
     setQuote('');
     document.getSelection()?.removeAllRanges();
     void reading.send(text, quick);
+  }
+
+  function runAction(action: QuickAction) {
+    if (busy) return;
+    setDraft('');
+    setQuote('');
+    document.getSelection()?.removeAllRanges();
+    action.run();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -441,9 +454,18 @@ export function ReadingPanel({
         </p>
         <div className="chip-row" role="group" aria-labelledby={`${id}-quick`}>
           {quicks.map((quick) => (
-            <button key={quick.id} type="button" className="chip" disabled={busy} onClick={() => submit(quick.message, quick)}>
-              {quick.label}
-            </button>
+            <Fragment key={quick.id}>
+              <button type="button" className="chip" disabled={busy} onClick={() => submit(quick.message, quick)}>
+                {quick.label}
+              </button>
+              {quickActions
+                .filter((action) => action.afterId === quick.id)
+                .map((action) => (
+                  <button key={action.id} type="button" className="chip" disabled={busy} onClick={() => runAction(action)}>
+                    {action.label}
+                  </button>
+                ))}
+            </Fragment>
           ))}
         </div>
       </div>

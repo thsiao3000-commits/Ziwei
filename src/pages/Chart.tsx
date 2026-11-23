@@ -3,15 +3,16 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { CentreInfo } from '../features/chart/CentreInfo';
 import { ChartBoard } from '../features/chart/ChartBoard';
 import { DensityControl } from '../features/chart/DensityControl';
-import { computeChart, computeHoroscope, computeLimits } from '../features/chart/engine';
+import { computeChart, computeHoroscope, computeLimits, computeMonths } from '../features/chart/engine';
 import { renderChartImage } from '../features/chart/exportImage';
 import { LimitControls } from '../features/chart/LimitControls';
 import { PalaceDetail } from '../features/chart/PalaceDetail';
+import { monthRows, monthsMessage, monthYears, serializeMonths } from '../features/chart/months';
 import { getChart, touchChart, updateChart } from '../features/chart/store';
-import { NO_LIMITS, type ChartData, type ChartSettings, type LimitSelection, type SavedChart } from '../features/chart/types';
+import { MAX_YEAR, NO_LIMITS, type ChartData, type ChartSettings, type LimitSelection, type SavedChart } from '../features/chart/types';
 import { conversationToMarkdown } from '../features/reading/exportMarkdown';
 import { palacePrompt } from '../features/reading/prompts';
-import { ReadingPanel } from '../features/reading/ReadingPanel';
+import { ReadingPanel, type QuickAction } from '../features/reading/ReadingPanel';
 import { todayString } from '../features/reading/request';
 import { serializeLimits, type School } from '../features/reading/serialize';
 import { useReading } from '../features/reading/useReading';
@@ -170,6 +171,23 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
   const asked = useRef(false);
   const ready = reading.conversations !== null;
   const { send } = reading;
+
+  // 快捷提問「流月財運」：今年的流月由排盤程式算好，當補充資料一起送出（和流月財運一覽的「請 AI 判讀」相同）。
+  const quickActions = useMemo<QuickAction[]>(() => {
+    const year = Number(todayString().split('-')[0]);
+    if (!monthYears(chart, MAX_YEAR).includes(year)) return [];
+    return [
+      {
+        id: 'months',
+        label: '流月財運',
+        afterId: 'invest',
+        run: () => {
+          const rows = monthRows(chart, computeMonths(saved.input, saved.chartSettings, year));
+          void send(monthsMessage(year), { palaces: [] }, { extra: serializeMonths(year, rows) });
+        },
+      },
+    ];
+  }, [chart, saved, send]);
   useEffect(() => {
     if (!pendingAsk || !ready || !provider || asked.current) return;
     asked.current = true;
@@ -209,6 +227,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
       perspective={perspective}
       onPerspectiveChange={setPerspective}
       attachedLimits={limitAttachment?.label ?? null}
+      quickActions={quickActions}
     />
   );
 

@@ -136,7 +136,7 @@ test('解讀視角：多派會診與自訂視角寫進提示詞', async ({ page 
   expect(bodies[0]!.system).toContain('解讀取向：飛星四化為主');
 
   await reading.getByLabel('視角').selectOption('panel');
-  await reading.getByRole('button', { name: '財運' }).click();
+  await reading.getByRole('button', { name: '財運', exact: true }).click();
   await expect(reading.getByText('好的，這是回覆。')).toHaveCount(2);
   expect(bodies[1]!.system).toContain('共同點與分歧');
 
