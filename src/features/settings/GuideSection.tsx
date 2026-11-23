@@ -62,6 +62,21 @@ const STEPS: readonly { title: string; body: ReactNode }[] = [
   },
 ];
 
+/**
+ * 把解讀結果貼到投資工具的步驟（業主的 Stock_TW）。
+ * 引號裡的名稱要和命盤頁、流月財運一覽以及 Stock_TW 設定頁上的一致。
+ */
+const PASTE_STEPS: readonly ReactNode[] = [
+  <>在命盤頁按快捷提問「投資性格摘要」，複製回覆最後「可貼上的摘要」那一段。</>,
+  <>
+    在命盤頁進「流月財運一覽」，選要看的年份，按「請 AI 判讀」。先拿回覆裡的國曆期間和頁面上的表格對一下，再複製回覆最後「可貼上的流月過濾」整個區塊。
+  </>,
+  <>
+    打開 Stock_TW 的「設定」，找到「投資目標與風險偏好」。先寫你自己的狀況（投資目標、能承受的回撤、每月可再投入的金額），接著貼上摘要，最後貼上流月過濾。這一欄打字或貼上後會自動儲存。
+  </>,
+  <>回到 Stock_TW 請 AI 分析個股或投資組合，這一欄的內容會一併寫進提問。</>,
+];
+
 export function GuideSection({ defaultOpen }: { defaultOpen: boolean }) {
   return (
     <details open={defaultOpen} className="border-y border-line-soft py-3">
@@ -82,6 +97,21 @@ export function GuideSection({ defaultOpen }: { defaultOpen: boolean }) {
           </li>
         ))}
       </ol>
+      <div className="mt-5 max-w-[34em]">
+        <h3 className="font-kai text-[1.125rem] font-bold">把結果貼到 Stock_TW（選用）</h3>
+        <p className="mt-1">
+          Stock_TW 是本站作者另一個股票分析工具。想讓它的 AI 建議參考命盤顯示的理財傾向時，照下面做：
+        </p>
+        <ol data-testid="paste-steps" className="mt-2 grid list-decimal gap-1 pl-5">
+          {PASTE_STEPS.map((step, index) => (
+            <li key={index}>{step}</li>
+          ))}
+        </ol>
+        <ul className="mt-2 grid list-disc gap-1 pl-5 text-ink-muted">
+          <li>流月過濾只適用一個農曆年，換年要重新判讀，並把舊的那一段換掉。大限或流年換了，摘要也要重做。</li>
+          <li>流月過濾是紫微斗數的傳統看法，沒有統計驗證。只拿來過濾加碼的時間，不要當成買進的理由；減碼與停損不受它限制。</li>
+        </ul>
+      </div>
       <div className="mt-5 max-w-[34em] border-l-2 border-line pl-3">
         <h3 className="font-kai text-[1.125rem] font-bold">先知道這幾件事</h3>
         <ul className="mt-1 grid list-disc gap-1 pl-5">
