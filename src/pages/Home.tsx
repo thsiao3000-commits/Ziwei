@@ -57,8 +57,9 @@ export function Home() {
   }
 
   return (
+    // 平板直向（768–1023px）兩欄會讓示範命盤太小，改成上下排。
     // 寬螢幕（1800px 以上）第三欄放「最近開啟的命盤」；窄一點放在表單下方，手機排在表單與示範命盤之間。
-    <div className="grid gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:grid-rows-[auto_1fr] md:gap-x-12 xl:grid-cols-[minmax(0,30rem)_minmax(0,720px)] 3xl:grid-cols-[minmax(0,30rem)_minmax(0,720px)_minmax(0,24rem)]">
+    <div className="grid gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:grid-rows-[auto_1fr] md:gap-x-12 md:max-lg:portrait:grid-cols-1 md:max-lg:portrait:grid-rows-none xl:grid-cols-[minmax(0,30rem)_minmax(0,720px)] 3xl:grid-cols-[minmax(0,30rem)_minmax(0,720px)_minmax(0,24rem)]">
       <section aria-labelledby="home-title" className="md:col-start-1 md:row-start-1">
         <h1 id="home-title" className="text-[1.75rem] md:text-[2.25rem]">
           排出命盤
@@ -105,7 +106,7 @@ export function Home() {
         </section>
       )}
 
-      <section aria-labelledby="demo-title" className="w-full max-w-[720px] md:col-start-2 md:row-span-2 md:row-start-1 3xl:row-span-1">
+      <section aria-labelledby="demo-title" className="w-full max-w-[720px] md:col-start-2 md:row-span-2 md:row-start-1 3xl:row-span-1 md:max-lg:portrait:col-start-1 md:max-lg:portrait:row-span-1 md:max-lg:portrait:row-start-auto">
         <h2 id="demo-title" className="text-[1.125rem]">
           示範命盤
         </h2>

@@ -198,6 +198,16 @@ test('首頁列出最近開啟的命盤，寬螢幕放在右邊', async ({ page 
     expect((await box(recent)).y).toBeGreaterThan((await box(form)).y + (await box(form)).height - 1);
     expect(Math.abs((await box(demo)).y - (await box(form)).y)).toBeLessThan(4);
     await page.screenshot({ path: testInfo.outputPath('home-recent-1440.png'), fullPage: true });
+
+    // 平板直向（820×1180）：兩欄會讓示範命盤太小，改成上下排；橫向（1180×820）維持兩欄。
+    await page.setViewportSize({ width: 820, height: 1180 });
+    expect(Math.abs((await box(demo)).x - (await box(form)).x)).toBeLessThan(4);
+    expect((await box(demo)).y).toBeGreaterThan((await box(recent)).y + (await box(recent)).height - 1);
+    expect((await box(demo)).width).toBeGreaterThan(700);
+    await page.screenshot({ path: testInfo.outputPath('home-ipad-portrait.png'), fullPage: true });
+    await page.setViewportSize({ width: 1180, height: 820 });
+    expect((await box(demo)).x).toBeGreaterThan((await box(form)).x + (await box(form)).width);
+    await page.setViewportSize({ width: 1440, height: 900 });
   } else {
     await page.screenshot({ path: testInfo.outputPath('home-recent-mobile.png'), fullPage: true });
   }
