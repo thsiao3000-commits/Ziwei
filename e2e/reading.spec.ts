@@ -444,3 +444,25 @@ for (const [width, height] of [
     expect(result.scrollWidth).toBeLessThanOrEqual(result.clientWidth);
   });
 }
+
+test('快捷提問：摺疊手機橫向與電腦換行、全部看得到；手機與平板直向維持左右滑動', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', '這個測試自己設定視窗大小');
+  await setup(page);
+  await castChart(page);
+  const row = page.locator('.chip-row:visible').first();
+  for (const [width, height, wraps] of [
+    [951, 669, true],
+    [1440, 900, true],
+    [820, 1180, false],
+    [393, 852, false],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await expect(row).toBeVisible();
+    const fits = await row.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      return [...el.querySelectorAll('button')].every((button) => button.getBoundingClientRect().right <= box.right + 1);
+    });
+    expect(fits, `${width}×${height}`).toBe(wraps);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  }
+});
