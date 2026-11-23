@@ -468,7 +468,7 @@ test('快捷提問：平板、摺疊手機橫向與電腦換行、全部看得�
   }
 });
 
-test('手機上快捷提問的右緣淡出，提示右邊還有按鈕；滑到底就取消；平板以上換行、不淡出', async ({ page }, testInfo) => {
+test('手機上快捷提問與運限選擇的右緣淡出，提示右邊還有按鈕；滑到底就取消；平板以上換行、不淡出', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', '這個測試自己設定視窗大小');
   await page.setViewportSize({ width: 393, height: 852 });
   await setup(page);
@@ -482,6 +482,19 @@ test('手機上快捷提問的右緣淡出，提示右邊還有按鈕；滑到�
   await expect.poll(mask).toContain('linear-gradient');
   if (process.env.SHOT_DIR) await row.screenshot({ path: `${process.env.SHOT_DIR}/chip-fade.png` });
 
+  // 命盤上方的運限選擇（大限、流年、流月）也一樣。
+  const limits = page.getByRole('group', { name: '運限' });
+  const limitMask = (index: number) => limits.locator('.chip-fade').nth(index).evaluate((el) => getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage);
+  expect(await limitMask(0)).toContain('linear-gradient');
+  await limits.getByRole('button', { name: '今天' }).click();
+  await expect(limits.locator('.chip-fade')).toHaveCount(3);
+  expect(await limitMask(1)).toContain('linear-gradient');
+  expect(await limitMask(2)).toContain('linear-gradient');
+  if (process.env.SHOT_DIR) await limits.screenshot({ path: `${process.env.SHOT_DIR}/limit-fade.png` });
+  await limits.locator('.chip-fade').nth(1).evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+  await expect.poll(() => limitMask(1)).toBe('none');
+
   await page.setViewportSize({ width: 820, height: 1180 });
   await expect.poll(mask).toBe('none');
+  await expect.poll(() => limitMask(0)).toBe('none');
 });

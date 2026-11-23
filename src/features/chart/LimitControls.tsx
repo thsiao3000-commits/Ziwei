@@ -1,3 +1,4 @@
+import { ChipRow } from '../../components/ChipRow';
 import type { Limits, LimitSelection } from './types';
 
 type Props = {
@@ -16,7 +17,7 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
     <div className="mt-4 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2" role="group" aria-label="運限">
       <div className="flex min-w-0 items-center gap-2">
         <span className="w-[2.5em] shrink-0 font-kai text-ink-muted">大限</span>
-        <div className="chip-row min-w-0 flex-1">
+        <ChipRow className="min-w-0 flex-1" count={limits.decadals.length + 2}>
           <button type="button" className="chip" aria-pressed={none} onClick={() => onChange({ decadal: null, year: null, month: null })}>
             本命
           </button>
@@ -37,13 +38,13 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
               </span>
             </button>
           ))}
-        </div>
+        </ChipRow>
       </div>
 
       {limits.years.length > 0 && (
         <div className="flex min-w-0 items-center gap-2">
           <span className="w-[2.5em] shrink-0 font-kai text-ink-muted">流年</span>
-          <div className="chip-row min-w-0 flex-1">
+          <ChipRow className="min-w-0 flex-1" count={limits.years.length}>
             {limits.years.map((item) => (
               <button
                 key={item.year}
@@ -61,14 +62,14 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
                 </span>
               </button>
             ))}
-          </div>
+          </ChipRow>
         </div>
       )}
 
       {limits.months.length > 0 && (
         <div className="flex min-w-0 items-center gap-2">
           <span className="w-[2.5em] shrink-0 font-kai text-ink-muted">流月</span>
-          <div className="chip-row min-w-0 flex-1">
+          <ChipRow className="min-w-0 flex-1" count={limits.months.length}>
             {limits.months.map((item) => (
               <button
                 key={item.index}
@@ -81,7 +82,7 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
                 {item.label}
               </button>
             ))}
-          </div>
+          </ChipRow>
         </div>
       )}
     </div>
