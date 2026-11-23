@@ -37,7 +37,7 @@ export function classify(failure: ProviderFailure): ErrorCode {
 
 /** Groq 的每分鐘 token 額度很容易在附上整張命盤時用完，訊息裡要講清楚。 */
 const GROQ_TPM_HINT =
-  'Groq 會把「提問內容加上回覆上限」算進每分鐘的 token 額度；免費方案的額度很小，附上整張命盤的提問可能一次就超過，追問會重送整段對話、更容易超過。請等一分鐘再試、開新對話、把詳略改成精簡，或到 Groq 主控台升級方案。';
+  'Groq 會把「提問內容加上回覆上限」算進每分鐘的 token 額度；免費方案的額度很小，附上整張命盤的提問可能一次就超過。請等一分鐘再試、把詳略改成精簡，或到 Groq 主控台升級方案。';
 
 export function describe(provider: ProviderId, code: ErrorCode, failure: ProviderFailure = {}): string {
   const name = PROVIDER_NAMES[provider];

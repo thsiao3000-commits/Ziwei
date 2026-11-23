@@ -47,7 +47,7 @@ pnpm preview      # 以 /Ziwei/ 子路徑預覽 dist/
 - 下拉選單來源：動態列表 → 推薦清單後備 → 使用者自訂 ID
 - 預設不送思考或取樣參數；參數被拒時移除後重試一次
 - 用官方 SDK（`@anthropic-ai/sdk`、`openai`）的瀏覽器模式，用到時才載入；測試用真的 SDK、只換掉 `fetch`
-- Groq（`lib/llm/groq.ts`）走 OpenAI 相容的 Chat Completions，沿用 `openai` 套件、只換 base URL（Groq 官方文件的做法）。它和另外兩家不同的地方：一定要送 `max_completion_tokens`（Groq 會把它算進每分鐘額度）、推理走 `delta.reasoning`、串流用量在 `x_groq.usage`、GPT-OSS 不能讀圖
+- Groq（`lib/llm/groq.ts`）走 OpenAI 相容的 Chat Completions，沿用 `openai` 套件、只換 base URL（Groq 官方文件的做法）。它和另外兩家不同的地方：一定要送 `max_completion_tokens`（Groq 會把它算進每分鐘額度）、推理走 `delta.reasoning`、串流用量在 `x_groq.usage`、GPT-OSS 不能讀圖、追問超過每分鐘額度時自動改送較短的對話並在回覆上註明
 
 ## 送給模型的資料
 

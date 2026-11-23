@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { createAnthropicProvider } from '../src/lib/llm/anthropic';
-import { createGroqProvider } from '../src/lib/llm/groq';
+import { createGroqProvider, GROQ_LAST_TURN_NOTICE, GROQ_QUESTION_ONLY_NOTICE } from '../src/lib/llm/groq';
 import { cannotReadImages } from '../src/lib/llm/models.config';
 import { createOpenAIProvider } from '../src/lib/llm/openai';
 import { filterChatModels, isChatModelId } from '../src/lib/llm/openai-filter';
@@ -599,6 +599,52 @@ describe('Groq provider', () => {
       expect(last.message).toContain('額度 8000，這次需要 11532 token');
       expect(last.message).not.toContain('帳務');
     }
+  });
+
+  const LONG_HISTORY: ChatRequest['messages'] = [
+    { role: 'user', content: '幫我看整張盤的重點' },
+    { role: 'assistant', content: '命宮紫微……' },
+    { role: 'user', content: '2028 年適合買房嗎？' },
+    { role: 'assistant', content: '2028 年田宅宮……' },
+    { role: 'user', content: '關注哪種房型？' },
+  ];
+  const tooLarge = () => openaiError(413, 'rate_limit_exceeded', 'Request too large on tokens per minute (TPM): Limit 8000, Requested 11532. Upgrade at https://console.groq.com/settings/billing');
+  const sentMessages = (call: Call | undefined) => (call?.body?.messages as { role: string; content: string }[]).map((message) => message.content);
+
+  it('追問超過每分鐘額度：改成只送上一輪問答重試，並提示模型看不到更早的對話', async () => {
+    const { calls, fetchImpl } = recorder((_call, index) => (index === 0 ? tooLarge() : sse(groqStream('stop'))));
+    const events = await collect(createGroqProvider(fetchImpl), { ...groqRequest, messages: LONG_HISTORY });
+    expect(calls).toHaveLength(2);
+    expect(sentMessages(calls[0])).toHaveLength(6);
+    expect(sentMessages(calls[1])).toEqual([groqRequest.system, '2028 年適合買房嗎？', '2028 年田宅宮……', '關注哪種房型？']);
+    expect(events[0]).toEqual({ type: 'notice', message: GROQ_LAST_TURN_NOTICE });
+    expect(events.at(-1)?.type).toBe('done');
+  });
+
+  it('只留上一輪還是超過：只送這次的提問；再超過才回報錯誤', async () => {
+    const ok = recorder((_call, index) => (index < 2 ? tooLarge() : sse(groqStream('stop'))));
+    const events = await collect(createGroqProvider(ok.fetchImpl), { ...groqRequest, messages: LONG_HISTORY });
+    expect(ok.calls).toHaveLength(3);
+    expect(sentMessages(ok.calls[2])).toEqual([groqRequest.system, '關注哪種房型？']);
+    expect(events.filter((event) => event.type === 'notice')).toEqual([{ type: 'notice', message: GROQ_QUESTION_ONLY_NOTICE }]);
+
+    const never = recorder(() => tooLarge());
+    const failed = await collect(createGroqProvider(never.fetchImpl), { ...groqRequest, messages: LONG_HISTORY });
+    expect(never.calls).toHaveLength(3);
+    expect(failed.some((event) => event.type === 'notice')).toBe(false);
+    const last = failed.at(-1);
+    expect(last?.type === 'error' && last.message).toContain('每分鐘');
+  });
+
+  it('第一次提問就超過、或只是請求太頻繁：不改短、不多送請求', async () => {
+    const first = recorder(() => tooLarge());
+    await collect(createGroqProvider(first.fetchImpl), { ...groqRequest, messages: [{ role: 'user', content: '幫我看整張盤的重點' }] });
+    expect(first.calls).toHaveLength(1);
+
+    const busy = recorder(() => openaiError(429, 'rate_limit_exceeded', 'Rate limit reached on tokens per minute (TPM): Limit 8000, Used 6000, Requested 5000'));
+    await collect(createGroqProvider(busy.fetchImpl), { ...groqRequest, messages: LONG_HISTORY });
+    // 429 會由 SDK 自動重試一次（maxRetries: 1），但對話不會被改短。
+    for (const call of busy.calls) expect(sentMessages(call)).toHaveLength(6);
   });
 
   it('Groq 每天的額度用完：說明是每天的限制', async () => {

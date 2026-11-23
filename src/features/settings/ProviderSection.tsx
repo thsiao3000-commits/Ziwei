@@ -166,7 +166,7 @@ export function ProviderSection({ provider }: { provider: ProviderId }) {
 
       {provider === 'groq' && (
         <p className="mt-3 max-w-[34em] text-sm text-ink-muted">
-          Groq 託管的是開源模型（GPT-OSS、Qwen 等）。免費方案每分鐘可用的 token 很少，附上整張命盤的提問可能一次就超過而被拒；常用的話建議在 Groq 主控台升級方案。
+          Groq 託管的是開源模型（GPT-OSS、Qwen 等）。免費方案每分鐘可用的 token 很少，附上整張命盤的提問可能一次就超過而被拒；追問時如果整段對話超過額度，本站會改成只送最近的內容（回覆上方會註明），模型就看不到較早的對話。常用的話建議在 Groq 主控台升級方案。
         </p>
       )}
 

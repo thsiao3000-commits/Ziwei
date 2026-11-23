@@ -3,6 +3,7 @@ import { classify, describe, EFFORT_DROPPED_NOTICE, isEffortRejection, type Prov
 import { mergeWithRecommended, type ListedModel } from './models.config';
 import {
   LLMError,
+  type ChatMessage,
   type ChatRequest,
   type Effort,
   type FetchLike,
@@ -77,6 +78,35 @@ function reasoningParams(model: string, effort: Effort | undefined): Record<stri
   return { reasoning_effort: effort, ...(model.startsWith('qwen/') ? { reasoning_format: 'hidden' } : {}) };
 }
 
+/**
+ * 單次請求就超過每分鐘的 token 額度（413，或訊息裡「Requested」大於「Limit」）。
+ * 這種情況等再久也送不出去，只能把請求變小。每天的額度用完不算。
+ */
+function isTooLarge(failure: ProviderFailure): boolean {
+  const detail = failure.detail ?? '';
+  if (/per day|\bTPD\b/i.test(detail)) return false;
+  if (failure.status === 413) return true;
+  const numbers = /Limit (\d+), Requested (\d+)/.exec(detail);
+  return failure.status === 429 && numbers !== null && Number(numbers[2]) > Number(numbers[1]);
+}
+
+export const GROQ_LAST_TURN_NOTICE = '整段對話超過 Groq 每分鐘的額度，這次只送出命盤、上一輪問答與這個問題；模型看不到更早的對話。';
+export const GROQ_QUESTION_ONLY_NOTICE = '整段對話超過 Groq 每分鐘的額度，這次只送出命盤與這個問題；模型看不到先前的對話。';
+
+/**
+ * 追問會重送整段對話，免費方案很快就超過每分鐘額度（業主實測第二問就被拒）。
+ * 被拒時依序改送較短的版本：先只留上一輪問答，再不行就只送這次的提問。命盤在系統提示詞裡，每次都會送。
+ */
+function shorterHistories(messages: readonly ChatMessage[]): { messages: readonly ChatMessage[]; notice: string }[] {
+  const result: { messages: readonly ChatMessage[]; notice: string }[] = [];
+  const lastAssistant = messages.map((message) => message.role).lastIndexOf('assistant');
+  if (lastAssistant < 0) return result;
+  const turnStart = messages[lastAssistant - 1]?.role === 'user' ? lastAssistant - 1 : lastAssistant + 1;
+  if (turnStart > 0 && turnStart <= lastAssistant) result.push({ messages: messages.slice(turnStart), notice: GROQ_LAST_TURN_NOTICE });
+  result.push({ messages: messages.slice(lastAssistant + 1), notice: GROQ_QUESTION_ONLY_NOTICE });
+  return result;
+}
+
 /** 不是文字對話用的模型（語音辨識、語音合成、內容審查）。 */
 const NOT_CHAT = /whisper|tts|orpheus|guard/i;
 
@@ -129,13 +159,13 @@ export function createGroqProvider(fetchImpl?: FetchLike): LLMProvider {
       const api = client(apiKey, fetchImpl);
       let emittedText = false;
 
-      async function* attempt(effort: Effort | undefined): AsyncGenerator<StreamEvent> {
+      async function* attempt(effort: Effort | undefined, messages: readonly ChatMessage[], notice?: string): AsyncGenerator<StreamEvent> {
         const stream = await api.chat.completions.create(
           {
             model: req.model,
             messages: [
               { role: 'system', content: req.system },
-              ...req.messages.map((message) => ({ role: message.role, content: message.content })),
+              ...messages.map((message) => ({ role: message.role, content: message.content })),
             ],
             stream: true,
             max_completion_tokens: MAX_COMPLETION_TOKENS,
@@ -144,6 +174,8 @@ export function createGroqProvider(fetchImpl?: FetchLike): LLMProvider {
           },
           { signal },
         );
+        // 請求被接受了才提示，免得連續改短時留下不對的說明。
+        if (notice) yield { type: 'notice', message: notice };
 
         let thinkingAnnounced = false;
         let finished = false;
@@ -187,23 +219,31 @@ export function createGroqProvider(fetchImpl?: FetchLike): LLMProvider {
         yield { type: 'error', code, message: describe('groq', code, failure) };
       }
 
-      try {
-        yield* attempt(req.effort);
-      } catch (error) {
-        if (isAbort(error, signal)) return;
-        const failure = toFailure(error);
-        // 參數被拒時移除後重試一次，並提示使用者。
-        if (req.effort && !emittedText && isEffortRejection(failure, failure.param)) {
-          yield { type: 'notice', message: EFFORT_DROPPED_NOTICE };
-          try {
-            yield* attempt(undefined);
-          } catch (retryError) {
-            if (isAbort(retryError, signal)) return;
-            yield* fail(retryError);
+      const histories = [{ messages: req.messages as readonly ChatMessage[], notice: undefined as string | undefined }, ...shorterHistories(req.messages)];
+      let effort = req.effort;
+      let index = 0;
+      // 最多重試：推理深度被拒一次，加上改短對話的次數。
+      for (;;) {
+        const history = histories[index]!;
+        try {
+          yield* attempt(effort, history.messages, history.notice);
+          return;
+        } catch (error) {
+          if (isAbort(error, signal)) return;
+          const failure = toFailure(error);
+          // 參數被拒時移除後重試一次，並提示使用者。
+          if (effort && !emittedText && isEffortRejection(failure, failure.param)) {
+            yield { type: 'notice', message: EFFORT_DROPPED_NOTICE };
+            effort = undefined;
+            continue;
           }
+          if (!emittedText && isTooLarge(failure) && index < histories.length - 1) {
+            index += 1;
+            continue;
+          }
+          yield* fail(error);
           return;
         }
-        yield* fail(error);
       }
     },
   };
