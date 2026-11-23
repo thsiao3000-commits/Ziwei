@@ -81,47 +81,52 @@ export function GuideSection({ defaultOpen }: { defaultOpen: boolean }) {
   return (
     <details open={defaultOpen} className="border-y border-line-soft py-3">
       <summary className="cursor-pointer font-kai text-[1.25rem] font-bold">新手使用指南</summary>
-      <ol className="mt-4 grid max-w-[34em] gap-4">
-        {STEPS.map((step, index) => (
-          <li key={step.title} className="grid grid-cols-[1.75rem_1fr] gap-x-2">
-            <span aria-hidden="true" className="font-kai text-[1.125rem] font-bold text-ink-muted">
-              {index + 1}
-            </span>
-            <div>
-              <h3 className="font-kai text-[1.125rem] font-bold">
-                <span className="sr-only">第 {index + 1} 步：</span>
-                {step.title}
-              </h3>
-              <p className="mt-1">{step.body}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-      <div className="mt-5 max-w-[34em]">
-        <h3 className="font-kai text-[1.125rem] font-bold">把結果貼到 Stock_TW（選用）</h3>
-        <p className="mt-1">
-          Stock_TW 是本站作者另一個股票分析工具。想讓它的 AI 建議參考命盤顯示的理財傾向時，照下面做：
-        </p>
-        <ol data-testid="paste-steps" className="mt-2 grid list-decimal gap-1 pl-5">
-          {PASTE_STEPS.map((step, index) => (
-            <li key={index}>{step}</li>
+      {/* 寬螢幕把三段並排（步驟｜貼到 Stock_TW｜注意事項），不讓右邊空著；每段仍限制行長。 */}
+      <div className="mt-4 grid gap-x-12 gap-y-5 xl:grid-cols-2 2xl:grid-cols-3">
+        <ol className="grid max-w-[34em] content-start gap-4">
+          {STEPS.map((step, index) => (
+            <li key={step.title} className="grid grid-cols-[1.75rem_1fr] gap-x-2">
+              <span aria-hidden="true" className="font-kai text-[1.125rem] font-bold text-ink-muted">
+                {index + 1}
+              </span>
+              <div>
+                <h3 className="font-kai text-[1.125rem] font-bold">
+                  <span className="sr-only">第 {index + 1} 步：</span>
+                  {step.title}
+                </h3>
+                <p className="mt-1">{step.body}</p>
+              </div>
+            </li>
           ))}
         </ol>
-        <ul className="mt-2 grid list-disc gap-1 pl-5 text-ink-muted">
-          <li>流月過濾只適用一個農曆年，換年要重新判讀，並把舊的那一段換掉。大限或流年換了，摘要也要重做。</li>
-          <li>流月過濾是紫微斗數的傳統看法，沒有統計驗證。只拿來過濾加碼的時間，不要當成買進的理由；減碼與停損不受它限制。</li>
-        </ul>
-      </div>
-      <div className="mt-5 max-w-[34em] border-l-2 border-line pl-3">
-        <h3 className="font-kai text-[1.125rem] font-bold">先知道這幾件事</h3>
-        <ul className="mt-1 grid list-disc gap-1 pl-5">
-          <li>命盤由排盤程式計算，AI 只負責解讀，不會更動盤上的星曜。</li>
-          <li>出生資料、命盤、對話與金鑰只存在這台裝置的瀏覽器裡。本站沒有帳號，也沒有伺服器會收到它們。</li>
-          <li>提問時，命盤內容（含四柱干支）會由你的瀏覽器直接送給你選的供應商，並依該供應商的政策處理。稱呼與出生年月日預設不送，可以在「模型」裡開啟。</li>
-          <li>金鑰等同付款憑證，不要貼給別人。用公用電腦時，把「記住金鑰的方式」改成「只記到關閉分頁」。</li>
-          <li>紫微斗數各門派算法不同。和你手上的命盤對不上時，先看「排盤」裡的晚子時、年分界與安星法。</li>
-          <li>解讀僅供自我了解與參考，不能取代醫療、法律或財務專業意見。</li>
-        </ul>
+        <div className="grid content-start gap-y-5 2xl:contents">
+          <div className="max-w-[34em]">
+            <h3 className="font-kai text-[1.125rem] font-bold">把結果貼到 Stock_TW（選用）</h3>
+            <p className="mt-1">
+              Stock_TW 是本站作者另一個股票分析工具。想讓它的 AI 建議參考命盤顯示的理財傾向時，照下面做：
+            </p>
+            <ol data-testid="paste-steps" className="mt-2 grid list-decimal gap-1 pl-5">
+              {PASTE_STEPS.map((step, index) => (
+                <li key={index}>{step}</li>
+              ))}
+        </ol>
+            <ul className="mt-2 grid list-disc gap-1 pl-5 text-ink-muted">
+              <li>流月過濾只適用一個農曆年，換年要重新判讀，並把舊的那一段換掉。大限或流年換了，摘要也要重做。</li>
+              <li>流月過濾是紫微斗數的傳統看法，沒有統計驗證。只拿來過濾加碼的時間，不要當成買進的理由；減碼與停損不受它限制。</li>
+            </ul>
+          </div>
+          <div className="max-w-[34em] self-start border-l-2 border-line pl-3">
+            <h3 className="font-kai text-[1.125rem] font-bold">先知道這幾件事</h3>
+            <ul className="mt-1 grid list-disc gap-1 pl-5">
+              <li>命盤由排盤程式計算，AI 只負責解讀，不會更動盤上的星曜。</li>
+              <li>出生資料、命盤、對話與金鑰只存在這台裝置的瀏覽器裡。本站沒有帳號，也沒有伺服器會收到它們。</li>
+              <li>提問時，命盤內容（含四柱干支）會由你的瀏覽器直接送給你選的供應商，並依該供應商的政策處理。稱呼與出生年月日預設不送，可以在「模型」裡開啟。</li>
+              <li>金鑰等同付款憑證，不要貼給別人。用公用電腦時，把「記住金鑰的方式」改成「只記到關閉分頁」。</li>
+              <li>紫微斗數各門派算法不同。和你手上的命盤對不上時，先看「排盤」裡的晚子時、年分界與安星法。</li>
+              <li>解讀僅供自我了解與參考，不能取代醫療、法律或財務專業意見。</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </details>
   );

@@ -233,3 +233,36 @@ test('新手使用指南：已經設定金鑰時預設收合', async ({ page }) 
   await expect(guide.locator('summary')).toBeVisible();
   await expect(guide).not.toHaveAttribute('open', '');
 });
+
+test('寬螢幕的設定頁：指南三段並排、設定區分左右兩欄，不留一大片空白', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', '只檢查電腦版');
+  const box = async (locator: ReturnType<Page['locator']>) => (await locator.boundingBox())!;
+  const guide = page.locator('details', { has: page.getByText('新手使用指南', { exact: true }) });
+  const steps = guide.locator('ol:not([data-testid])');
+  const paste = guide.getByRole('heading', { level: 3, name: '把結果貼到 Stock_TW（選用）' });
+  const notes = guide.getByRole('heading', { level: 3, name: '先知道這幾件事' });
+  const keys = page.getByRole('heading', { level: 2, name: 'AI 供應商與金鑰' });
+  const chart = page.getByRole('heading', { level: 2, name: '排盤' });
+
+  // 1440：指南兩欄（步驟｜其餘兩段上下排），設定區兩欄
+  await page.goto('./#/settings');
+  await expect(notes).toBeVisible();
+  expect((await box(paste)).x).toBeGreaterThan((await box(steps)).x + 300);
+  expect((await box(notes)).y).toBeGreaterThan((await box(paste)).y);
+  expect((await box(chart)).x).toBeGreaterThan((await box(keys)).x + 400);
+  expect(Math.abs((await box(chart)).y - (await box(keys)).y)).toBeLessThan(4);
+  await page.screenshot({ path: testInfo.outputPath('settings-1440.png'), fullPage: true });
+
+  // 1920：指南三段並排
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  expect((await box(notes)).x).toBeGreaterThan((await box(paste)).x + 300);
+  expect(Math.abs((await box(notes)).y - (await box(paste)).y)).toBeLessThan(4);
+  // 用到畫面右半邊
+  expect((await box(notes)).x).toBeGreaterThan(1100);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  await page.screenshot({ path: testInfo.outputPath('settings-1920.png'), fullPage: true });
+
+  // 1100：維持單欄
+  await page.setViewportSize({ width: 1100, height: 900 });
+  expect((await box(chart)).y).toBeGreaterThan((await box(keys)).y + 200);
+});
