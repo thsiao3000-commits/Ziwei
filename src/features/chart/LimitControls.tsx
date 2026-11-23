@@ -17,7 +17,7 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
     <div className="mt-4 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2" role="group" aria-label="運限">
       <div className="flex min-w-0 items-center gap-2">
         <span className="w-[2.5em] shrink-0 font-kai text-ink-muted">大限</span>
-        <ChipRow className="min-w-0 flex-1" count={limits.decadals.length + 2}>
+        <ChipRow className="min-w-0 flex-1" count={limits.decadals.length + 2} activeKey={selection.decadal}>
           <button type="button" className="chip" aria-pressed={none} onClick={() => onChange({ decadal: null, year: null, month: null })}>
             本命
           </button>
@@ -44,7 +44,7 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
       {limits.years.length > 0 && (
         <div className="flex min-w-0 items-center gap-2">
           <span className="w-[2.5em] shrink-0 font-kai text-ink-muted">流年</span>
-          <ChipRow className="min-w-0 flex-1" count={limits.years.length}>
+          <ChipRow className="min-w-0 flex-1" count={limits.years.length} activeKey={selection.year} key={selection.decadal}>
             {limits.years.map((item) => (
               <button
                 key={item.year}
@@ -69,7 +69,7 @@ export function LimitControls({ limits, onChange, onToday }: Props) {
       {limits.months.length > 0 && (
         <div className="flex min-w-0 items-center gap-2">
           <span className="w-[2.5em] shrink-0 font-kai text-ink-muted">流月</span>
-          <ChipRow className="min-w-0 flex-1" count={limits.months.length}>
+          <ChipRow className="min-w-0 flex-1" count={limits.months.length} activeKey={selection.month} key={selection.year}>
             {limits.months.map((item) => (
               <button
                 key={item.index}

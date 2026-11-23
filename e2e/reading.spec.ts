@@ -498,3 +498,32 @@ test('手機上快捷提問與運限選擇的右緣淡出，提示右邊還有�
   await expect.poll(mask).toBe('none');
   await expect.poll(() => limitMask(0)).toBe('none');
 });
+
+test('手機：按「今天」之後，選中的大限與流年會捲到看得見的位置，不被切掉也不落在淡出的範圍', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', '這個測試自己設定視窗大小');
+  await page.setViewportSize({ width: 393, height: 852 });
+  await setup(page);
+  await castChart(page);
+  const limits = page.getByRole('group', { name: '運限' });
+  await limits.getByRole('button', { name: '今天' }).click();
+  await expect(limits.locator('.chip-fade')).toHaveCount(3);
+
+  for (const index of [0, 1]) {
+    const row = limits.locator('.chip-fade').nth(index);
+    await expect
+      .poll(() =>
+        row.evaluate((el) => {
+          const chip = el.querySelector('[aria-pressed="true"]');
+          if (!chip) return 'no selection';
+          const box = el.getBoundingClientRect();
+          const item = chip.getBoundingClientRect();
+          const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+          return item.left >= box.left - 1 && item.right <= box.right - (atEnd ? 0 : 48) + 1 ? 'visible' : 'cut off';
+        }),
+      )
+      .toBe('visible');
+  }
+  // 只捲動那一列，頁面本身不會被橫向捲動或撐寬。
+  expect(await page.evaluate(() => [window.scrollX, document.documentElement.scrollWidth <= document.documentElement.clientWidth])).toEqual([0, true]);
+  if (process.env.SHOT_DIR) await limits.screenshot({ path: `${process.env.SHOT_DIR}/limit-scroll.png` });
+});
