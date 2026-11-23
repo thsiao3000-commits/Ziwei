@@ -542,8 +542,9 @@
 }
 
 /* 電腦上沒有觸控滑動，橫向捲動列看起來像被截掉：改成換行，全部看得到。
-   門檻放在 900px：摺疊手機橫向（iPhone Duo 內螢幕約 951px）夠寬，也一起換行（業主要求，v1.13.2）。 */
-@media (min-width: 900px) {
+   門檻放在 768px：平板直向（iPad 820px）與摺疊手機橫向（iPhone Duo 內螢幕約 951px）也一起換行
+   （業主要求，v1.13.2 降到 900px，v1.13.3 再降到 768px）。 */
+@media (min-width: 768px) {
   .chip-row {
     flex-wrap: wrap;
     overflow: visible;
