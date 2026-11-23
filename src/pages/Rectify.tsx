@@ -211,6 +211,7 @@ export function Rectify() {
           })}
         </div>
 
+        <div className="xl:grid xl:grid-cols-[minmax(0,40rem)_minmax(0,34rem)] xl:items-start xl:gap-x-16">
         <div className="mt-8 relative max-w-full overflow-x-auto" role="region" aria-label="逐宮主星對照（可橫向捲動）" tabIndex={0}>
           <table className="w-full min-w-[22rem] max-w-[40rem] border-collapse text-[0.9375rem]">
             <caption className="pb-2 text-left font-kai text-[1.125rem] font-bold">逐宮主星對照</caption>
@@ -262,6 +263,7 @@ export function Rectify() {
               </Link>
             </p>
           )}
+        </div>
         </div>
       </section>
     </div>

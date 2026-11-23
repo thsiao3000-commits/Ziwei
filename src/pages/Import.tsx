@@ -163,7 +163,7 @@ export function Import() {
   const mismatched = checks?.some((check) => !check.matches) ?? false;
 
   return (
-    <div className="max-w-[60rem]">
+    <div className="max-w-[60rem] xl:max-w-none">
       <p className="text-sm">
         <Link to="/" className="text-accent underline underline-offset-4">
           回到排盤
@@ -174,6 +174,9 @@ export function Import() {
         已經有別處排好的命盤圖片嗎？請 AI 讀出圖上的出生資料，帶進表單給你核對，再由本站的排盤程式重新排出命盤。AI 只讀圖上的文字，不負責排盤，圖上的星曜也不會被匯入。
       </p>
 
+      {/* 寬螢幕：左欄選圖與讀取，右欄核對與排盤。 */}
+      <div className="xl:grid xl:grid-cols-2 xl:items-start xl:gap-x-16">
+      <div className="min-w-0">
       {!provider ? (
         <div className="mt-6 max-w-[34em] border-l-2 border-line pl-3">
           <p>讀圖需要 AI，請先設定你自己的 OpenAI 或 Claude API 金鑰。沒有金鑰也可以在排盤頁手動輸入出生資料。</p>
@@ -244,9 +247,10 @@ export function Import() {
           {error}
         </p>
       )}
+      </div>
 
       {result && prepared && (
-        <section aria-labelledby="import-confirm" className="mt-8">
+        <section aria-labelledby="import-confirm" className="mt-8 min-w-0">
           <h2 id="import-confirm" className="text-[1.375rem]">
             核對後排出命盤
           </h2>
@@ -303,6 +307,7 @@ export function Import() {
           </div>
         </section>
       )}
+      </div>
     </div>
   );
 }

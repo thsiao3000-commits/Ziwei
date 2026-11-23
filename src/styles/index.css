@@ -4,6 +4,8 @@
 
 /* 把語意 token 接到 Tailwind：bg-bg、text-ink、border-line、font-kai … */
 @theme inline {
+  /* 內容最寬 1800px：到這個寬度時可以多排一欄（我的命盤、名詞）。 */
+  --breakpoint-3xl: 112.5rem;
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-ink: var(--ink);

@@ -105,9 +105,9 @@ export function Charts() {
       )}
 
       {rows !== null && rows.length > 0 && (
-        <ul className="mt-6 max-w-[46rem] border-t border-line-soft">
+        <ul className="mt-6 max-w-[46rem] border-t border-line-soft xl:grid xl:max-w-none xl:grid-cols-2 xl:gap-x-12 3xl:grid-cols-3">
           {rows.map(({ saved, birthday, soul }) => (
-            <li key={saved.id} className="grid gap-3 border-b border-line-soft py-4">
+            <li key={saved.id} className="grid content-start gap-3 border-b border-line-soft py-4">
               <div className="min-w-0">
                 {renaming?.id === saved.id ? (
                   <form

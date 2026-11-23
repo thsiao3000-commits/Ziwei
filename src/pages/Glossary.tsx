@@ -16,7 +16,7 @@ export function Glossary() {
   }, [target]);
 
   return (
-    <section aria-labelledby="glossary-title" className="max-w-[60rem]">
+    <section aria-labelledby="glossary-title" className="max-w-[60rem] xl:max-w-none">
       <h1 id="glossary-title" className="text-[1.75rem] md:text-[2.25rem]">
         名詞小辭典
       </h1>
@@ -54,7 +54,7 @@ export function Glossary() {
             <h2 id={`category-${category}`} className="border-b border-line pb-1 text-[1.375rem]">
               {category}
             </h2>
-            <dl className="mt-2">
+            <dl className="mt-2 xl:grid xl:grid-cols-2 xl:gap-x-12 3xl:grid-cols-3">
               {items.map((item) => (
                 <div
                   key={item.term}

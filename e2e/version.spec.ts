@@ -110,3 +110,55 @@ test('電腦版內容靠左，寬螢幕不置中', async ({ page }) => {
   expect(brand?.x).toBeCloseTo(20, 0);
   expect(heading?.x).toBeCloseTo(20, 0);
 });
+
+test('寬螢幕：我的命盤、名詞、流月財運一覽用到右邊的空間，窄一點維持單欄', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', '只檢查電腦版');
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  // 虛構的測試生日
+  for (const [name, day] of [['小明', '16'], ['小華', '20'], ['小美', '22']] as const) {
+    await page.goto('./');
+    await page.getByLabel('稱呼').fill(name);
+    await page.getByRole('radio', { name: '女' }).check({ force: true });
+    await page.getByLabel('年（西元）').fill('2000');
+    await page.getByLabel('月', { exact: true }).selectOption('8');
+    await page.getByLabel('日', { exact: true }).selectOption(day);
+    await page.getByLabel('或直接選時辰').selectOption('2');
+    await page.getByRole('button', { name: '排出命盤' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: `${name}的命盤` })).toBeVisible();
+  }
+  const noOverflow = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+
+  // 流月財運一覽：說明在左，表格在右
+  await page.getByRole('link', { name: '流月財運一覽' }).click();
+  const table = page.getByRole('table', { name: /年的流月/ });
+  await expect(table).toBeVisible({ timeout: 30_000 });
+  const year = page.getByLabel('要看的年份');
+  expect((await table.boundingBox())!.x).toBeGreaterThan((await year.boundingBox())!.x + 400);
+  expect((await table.boundingBox())!.y).toBeLessThan((await year.boundingBox())!.y);
+  await noOverflow();
+  await page.screenshot({ path: testInfo.outputPath('wide-months.png'), fullPage: true });
+
+  // 我的命盤：三張排成一列
+  await page.goto('./#/charts');
+  const items = page.locator('main ul > li');
+  await expect(items).toHaveCount(3);
+  const ys = await items.evaluateAll((elements) => elements.map((element) => Math.round(element.getBoundingClientRect().top)));
+  expect(new Set(ys).size).toBe(1);
+  await noOverflow();
+  await page.screenshot({ path: testInfo.outputPath('wide-charts.png') });
+
+  // 名詞：每一類三欄
+  await page.goto('./#/glossary');
+  const first = page.locator('dl').first().locator('> div');
+  await expect(first.first()).toBeVisible({ timeout: 30_000 });
+  const tops = await first.evaluateAll((elements) => elements.slice(0, 3).map((element) => Math.round(element.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  await noOverflow();
+  await page.screenshot({ path: testInfo.outputPath('wide-glossary.png') });
+
+  // 1100：回到單欄
+  await page.setViewportSize({ width: 1100, height: 900 });
+  const narrow = await first.evaluateAll((elements) => elements.slice(0, 2).map((element) => Math.round(element.getBoundingClientRect().top)));
+  expect(narrow[1]).toBeGreaterThan(narrow[0]!);
+  await noOverflow();
+});

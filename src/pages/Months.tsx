@@ -93,6 +93,9 @@ export function Months() {
         </Link>
       </p>
       <h1 className="mt-2 text-[1.75rem] md:text-[2.25rem]">流月財運一覽</h1>
+      {/* 寬螢幕：說明、年份與「請 AI 判讀」在左欄，表格在右欄；窄一點就照原本的順序上下排。 */}
+      <div className="2xl:grid 2xl:grid-cols-[minmax(0,34rem)_minmax(0,1fr)] 2xl:items-start 2xl:gap-x-12">
+      <div className="2xl:col-start-1 2xl:row-start-1">
       <p className="mt-3 max-w-[34em]">
         選一年，列出每個流月的流月命宮與流月四化落在本命盤的哪一宮。傳統上看財運，會留意祿與忌有沒有落在命宮、財帛、福德、田宅。
       </p>
@@ -126,11 +129,10 @@ export function Months() {
       <p className="mt-2 max-w-[34em] text-sm text-ink-muted">
         國曆期間是每個農曆月的初一到月底。流月的干支與四化取初一那一天的月干，而月干依節氣換月，和農曆月初通常差幾天到兩週；交界前後的日子請保守看待。
       </p>
-      <div>
       </div>
 
       {rows ? (
-        <div className="relative mt-5 max-w-full overflow-x-auto" role="region" aria-label={`${year} 年的流月（可橫向捲動）`} tabIndex={0}>
+        <div className="relative mt-5 max-w-full overflow-x-auto 2xl:col-start-2 2xl:row-span-2 2xl:row-start-1" role="region" aria-label={`${year} 年的流月（可橫向捲動）`} tabIndex={0}>
           <table className="w-full min-w-[52rem] max-w-[72rem] border-collapse text-[0.9375rem]">
             <caption className="pb-2 text-left font-kai text-[1.125rem] font-bold">{year} 年的流月</caption>
             <thead>
@@ -164,12 +166,12 @@ export function Months() {
           </table>
         </div>
       ) : (
-        <p role="alert" className="mt-4 border-l-2 border-danger pl-3 text-danger">
+        <p role="alert" className="mt-4 border-l-2 border-danger pl-3 text-danger 2xl:col-start-2 2xl:row-span-2 2xl:row-start-1">
           這一年的流月算不出來，請改選其他年份。
         </p>
       )}
 
-      <section aria-labelledby="months-ask" className="mt-8">
+      <section aria-labelledby="months-ask" className="mt-8 2xl:col-start-1 2xl:row-start-2">
         <h2 id="months-ask" className="text-[1.375rem]">
           請 AI 判讀
         </h2>
@@ -189,6 +191,7 @@ export function Months() {
           </p>
         )}
       </section>
+      </div>
     </div>
   );
 }

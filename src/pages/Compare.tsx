@@ -234,6 +234,8 @@ function CompareView({ a, b }: { a: Side; b: Side }) {
             </li>
           </ul>
 
+          {/* 寬螢幕：兩張小表並排。 */}
+          <div className="2xl:grid 2xl:grid-cols-2 2xl:items-start 2xl:gap-x-10">
           <div className="relative mt-5 max-w-full overflow-x-auto" role="region" aria-label="生年四化互入（可橫向捲動）" tabIndex={0}>
             <table className="w-full min-w-[26rem] max-w-[44rem] border-collapse text-[0.9375rem]">
               <caption className="pb-2 text-left font-kai text-[1.125rem] font-bold">生年四化互入</caption>
@@ -271,7 +273,7 @@ function CompareView({ a, b }: { a: Side; b: Side }) {
             </table>
           </div>
 
-          <div className="relative mt-8 max-w-full overflow-x-auto" role="region" aria-label="逐宮主星對照（可橫向捲動）" tabIndex={0}>
+          <div className="relative mt-8 2xl:mt-5 max-w-full overflow-x-auto" role="region" aria-label="逐宮主星對照（可橫向捲動）" tabIndex={0}>
             <table className="w-full min-w-[22rem] max-w-[44rem] border-collapse text-[0.9375rem]">
               <caption className="pb-2 text-left font-kai text-[1.125rem] font-bold">逐宮主星對照</caption>
               <thead>
@@ -299,6 +301,7 @@ function CompareView({ a, b }: { a: Side; b: Side }) {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         </section>
 
