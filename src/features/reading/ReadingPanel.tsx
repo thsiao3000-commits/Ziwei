@@ -506,7 +506,7 @@ export function ReadingPanel({
       <div ref={end} />
 
       {/* 輸入區：手機上固定在底部導覽列的正上方（高度含 iPhone 的安全區）。 */}
-      <div className="sticky bottom-[var(--bottom-nav-height)] z-10 -mx-4 border-t border-line-soft bg-bg px-4 pb-3 pt-3 md:bottom-0 lg:static lg:mx-0 lg:border-0 lg:p-0">
+      <div className="sticky bottom-[var(--bottom-nav-height)] z-10 -mx-4 border-t border-line-soft bg-bg px-4 pb-3 pt-3 md:bottom-0 split:static split:mx-0 split:border-0 split:p-0">
         {quote && (
           <button type="button" className={`${smallButton} mb-2`} onMouseDown={(event) => event.preventDefault()} onClick={askAboutQuote}>
             追問這段

@@ -216,3 +216,50 @@ test('首頁列出最近開啟的命盤，寬螢幕放在右邊', async ({ page 
   await recent.getByRole('link', { name: '小明' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '小明的命盤' })).toBeVisible();
 });
+
+test('命盤頁：摺疊手機橫向（約 951×669）左右兩欄，整張命盤放得進一個畫面；窄一點或直向維持上下排', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', '這個測試自己設定視窗大小');
+  await page.setViewportSize({ width: 951, height: 669 });
+  await page.goto('./');
+  await page.getByLabel('稱呼').fill('小明');
+  await page.getByRole('radio', { name: '女' }).check({ force: true });
+  await page.getByLabel('年（西元）').fill('2000');
+  await page.getByLabel('月', { exact: true }).selectOption('8');
+  await page.getByLabel('日', { exact: true }).selectOption('16');
+  await page.getByLabel('時鐘時間').fill('04:10');
+  await page.getByRole('button', { name: '排出命盤' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '小明的命盤' })).toBeVisible();
+
+  const board = page.getByRole('group', { name: '小明的命盤' });
+  const aside = page.getByRole('complementary', { name: '解讀與宮位詳情' });
+  const measure = async () => {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const box = (await board.boundingBox())!;
+    return { bottom: box.y + box.height, right: box.x + box.width, width: box.width };
+  };
+
+  // 橫向：解讀在命盤右邊，命盤的下緣在畫面內，也沒有小到比一般手機還小。
+  await expect(aside).toBeVisible();
+  let size = await measure();
+  expect(size.bottom).toBeLessThanOrEqual(669);
+  expect(size.width).toBeGreaterThanOrEqual(360);
+  expect((await aside.boundingBox())!.x).toBeGreaterThanOrEqual(size.right);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  // 螢幕更矮（瀏覽器的網址列佔掉一部分）：命盤跟著縮，但不小於 360px。
+  await page.setViewportSize({ width: 951, height: 600 });
+  size = await measure();
+  expect(size.bottom).toBeLessThanOrEqual(600);
+  expect(size.width).toBeGreaterThanOrEqual(360);
+
+  // 電腦（1024 以上）不受高度限制影響：命盤維持原本的大小。
+  await page.setViewportSize({ width: 1024, height: 669 });
+  expect((await measure()).width).toBeGreaterThan(540);
+
+  // 899px 以下與平板直向：上下排，側欄不顯示。
+  for (const [width, height] of [[899, 700], [820, 1180], [669, 951]] as const) {
+    await page.setViewportSize({ width, height });
+    await expect(aside).toBeHidden();
+    await expect(page.locator('#reading-section')).toBeVisible();
+  }
+});

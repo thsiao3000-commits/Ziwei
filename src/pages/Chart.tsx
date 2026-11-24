@@ -209,7 +209,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
     setTab('reading');
     void reading.send(quick.message, quick);
     // 手機：收起抽屜（保留選取），捲到解讀面板。
-    if (window.matchMedia('(max-width: 1023px)').matches) {
+    if (window.matchMedia('(max-width: 899.98px)').matches) {
       setSheetOpen(false);
       document.getElementById('reading-section')?.scrollIntoView({ block: 'start' });
     }
@@ -245,7 +245,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
     );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-10 2xl:grid-cols-[minmax(0,820px)_minmax(0,1fr)]">
+    <div className="grid gap-6 split:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] split:gap-6 lg:gap-10 2xl:grid-cols-[minmax(0,820px)_minmax(0,1fr)]">
       <section aria-labelledby="chart-title" className="min-w-0">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <h1 id="chart-title" className="text-[1.5rem] md:text-[2rem]">
@@ -264,7 +264,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
             流月財運一覽
           </Link>
         </p>
-        <div className="w-full max-w-[820px]">
+        <div className="chart-fit w-full max-w-[820px]">
           <ChartBoard
             chart={chart}
             density={density}
@@ -328,7 +328,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
       </section>
 
       {/* 桌機：側欄，解讀與宮位詳情兩個分頁 */}
-      <aside aria-label="解讀與宮位詳情" className="hidden min-w-0 border-l border-line pl-10 lg:block">
+      <aside aria-label="解讀與宮位詳情" className="hidden min-w-0 border-l border-line pl-6 split:block lg:pl-10">
         {palace && (
           <div role="tablist" aria-label="側欄內容" className="mb-4 flex gap-1 border-b border-line-soft">
             {(
@@ -354,7 +354,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
       </aside>
 
       {/* 手機：解讀接在命盤下方 */}
-      <section id="reading-section" aria-labelledby="reading-below" className="min-w-0 scroll-mt-4 lg:hidden">
+      <section id="reading-section" aria-labelledby="reading-below" className="min-w-0 scroll-mt-4 split:hidden">
         {panel('reading-below')}
       </section>
 
@@ -363,7 +363,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
         <div
           role="dialog"
           aria-labelledby="palace-detail-sheet"
-          className="palace-sheet fixed inset-x-0 bottom-0 z-40 max-h-[58dvh] overflow-y-auto rounded-t-sheet border-t border-line bg-bg px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 lg:hidden"
+          className="palace-sheet fixed inset-x-0 bottom-0 z-40 max-h-[58dvh] overflow-y-auto rounded-t-sheet border-t border-line bg-bg px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 split:hidden"
         >
           {detail('palace-detail-sheet')}
         </div>
