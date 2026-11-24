@@ -542,9 +542,10 @@
 }
 
 /* 電腦上沒有觸控滑動，橫向捲動列看起來像被截掉：改成換行，全部看得到。
-   門檻放在 768px：平板直向（iPad 820px）與摺疊手機橫向（iPhone Duo 內螢幕約 951px）也一起換行
-   （業主要求，v1.13.2 降到 900px，v1.13.3 再降到 768px）。 */
-@media (min-width: 768px) {
+   門檻原本放在 768px：平板直向（iPad 820px）與摺疊手機橫向（iPhone Duo 內螢幕約 951px）也一起換行
+   （業主要求，v1.13.2 降到 900px，v1.13.3 降到 768px，v1.14.3 再降到 640px：摺疊手機直向，
+   iPhone Duo 內螢幕約 669px，也換行）。一般手機（窄於 640px）維持左右滑動。 */
+@media (min-width: 640px) {
   .chip-row {
     flex-wrap: wrap;
     overflow: visible;
@@ -554,7 +555,7 @@
 
 /* 手機上快捷提問左右滑動：右邊還有按鈕時，右緣淡出當作提示；捲到底就取消（data-at-end 由元件標上）。
    只靠「最後一個按鈕被切一半」不可靠，切點剛好落在兩個按鈕中間時看起來像已經到底。 */
-@media (max-width: 767.98px) {
+@media (max-width: 639.98px) {
   .chip-fade:not([data-at-end]) {
     -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
     mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);

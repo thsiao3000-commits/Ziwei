@@ -445,7 +445,7 @@ for (const [width, height] of [
   });
 }
 
-test('快捷提問：平板、摺疊手機橫向與電腦換行、全部看得到；手機與摺疊手機直向維持左右滑動', async ({ page }, testInfo) => {
+test('快捷提問：平板、摺疊手機內螢幕與電腦換行、全部看得到；一般手機與摺疊手機外螢幕維持左右滑動', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', '這個測試自己設定視窗大小');
   await setup(page);
   await castChart(page);
@@ -454,7 +454,8 @@ test('快捷提問：平板、摺疊手機橫向與電腦換行、全部看得�
     [951, 669, true],
     [1440, 900, true],
     [820, 1180, true],
-    [669, 951, false],
+    [669, 951, true],
+    [466, 678, false],
     [393, 852, false],
   ] as const) {
     await page.setViewportSize({ width, height });
