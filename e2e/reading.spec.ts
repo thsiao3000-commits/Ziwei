@@ -261,7 +261,7 @@ test('網站更新後舊分頁載不到 AI 模組：自動重新載入，提問�
   // 自動重新載入；提問已經存在本機，不會不見。
   await expect.poll(() => loads, { timeout: 15_000 }).toBeGreaterThan(before);
   const after = panel(page);
-  await expect(after.getByLabel('對話內容').getByText('我的事業發展如何？適合什麼樣的工作方式？')).toBeVisible();
+  await expect(after.getByLabel('對話內容').getByText('我的事業發展如何？適合什麼樣的工作方式？請先看本命，再說明目前大限與今年流年在事業上要留意什麼。')).toBeVisible();
   await expect(after.getByText('這則提問還沒有回覆。')).toBeVisible();
   await expect(after.getByRole('alert')).toHaveCount(0);
   expect(bodies).toHaveLength(0);

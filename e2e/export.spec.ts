@@ -106,7 +106,7 @@ test('匯出這段對話（Markdown）', async ({ page }) => {
   expect(file.suggestedFilename()).toMatch(/^紫微解讀-我的事業發展如何.*\.md$/);
   const markdown = await readFile(await file.path(), 'utf8');
   expect(markdown).toContain('**命盤**：小明（女）｜國曆 2000 年 8 月 16 日');
-  expect(markdown).toContain('## 提問\n\n> 我的事業發展如何？適合什麼樣的工作方式？');
+  expect(markdown).toContain('## 提問\n\n> 我的事業發展如何？適合什麼樣的工作方式？請先看本命，再說明目前大限與今年流年在事業上要留意什麼。');
   expect(markdown).toContain('_已帶入：官祿、命宮、財帛、遷移_');
   expect(markdown).toContain('## 解讀\n\n**結論**：官祿宮廉貞天府。');
   expect(markdown).toContain('claude-sonnet-5-5');

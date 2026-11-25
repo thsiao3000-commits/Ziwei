@@ -172,6 +172,17 @@ describe('系統提示詞', () => {
     expect(palacePrompt('官祿').message).toBe('請解讀我的官祿宮。');
   });
 
+  it('主題提問要求談目前大限與今年流年；總論與性格不要求，也不觸發自動附流年', () => {
+    const message = (id: string) => QUICK_PROMPTS.find((item) => item.id === id)!.message;
+    for (const id of ['career', 'wealth', 'love', 'partner', 'health']) {
+      expect(message(id)).toContain('目前大限與今年流年');
+      expect(message(id)).toContain('要留意什麼');
+      expect(mentionedYears(message(id), 1900)).toEqual([]);
+    }
+    for (const id of ['overview', 'character']) expect(message(id)).not.toContain('流年');
+    expect(message('health')).toBe('健康方面有哪些值得留意的地方？請先看本命，再說明目前大限與今年流年在健康上要留意什麼。');
+  });
+
   it('投資性格摘要：分本命與運限兩段，只談行為傾向，運限只能更保守，不觸發自動附流年', () => {
     const quick = QUICK_PROMPTS.find((item) => item.id === 'invest')!;
     expect(quick.palaces).toEqual(['財帛', '福德', '命宮', '田宅']);
