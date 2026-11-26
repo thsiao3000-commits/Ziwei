@@ -273,5 +273,18 @@ test('命盤頁：只有電腦分左右兩欄；平板與摺疊手機橫向上�
   // 一般手機橫向（高度不夠）：不縮命盤，維持撐滿寬度。
   await touch.setViewportSize({ width: 852, height: 393 });
   expect((await measure(touch)).width).toBeGreaterThan(700);
+  // 旋轉之後替使用者把頁面捲 1px 再捲回來（iOS Safari 才會把固定在底部的元素排回原位），捲動位置不變。
+  await touch.setViewportSize({ width: 669, height: 951 });
+  await touch.evaluate(() => window.scrollTo(0, 300));
+  await touch.waitForTimeout(1300);
+  await touch.evaluate(() => {
+    (window as unknown as { __scrolls: number }).__scrolls = 0;
+    window.addEventListener('scroll', () => ((window as unknown as { __scrolls: number }).__scrolls += 1));
+  });
+  await touch.setViewportSize({ width: 860, height: 669 });
+  await touch.evaluate(() => window.scrollTo(0, 300));
+  await touch.waitForTimeout(1500);
+  expect(await touch.evaluate(() => (window as unknown as { __scrolls: number }).__scrolls)).toBeGreaterThanOrEqual(2);
+  expect(await touch.evaluate(() => window.scrollY)).toBe(300);
   await context.close();
 });

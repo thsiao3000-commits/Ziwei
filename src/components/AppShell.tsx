@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router';
+import { useFixedRepair } from '../lib/fixedRepair';
 import { APP_VERSION } from '../lib/version';
 import { UpdateBanner } from './UpdateBanner';
 
@@ -16,6 +17,7 @@ function navClass({ isActive }: { isActive: boolean }): string {
 }
 
 export function AppShell() {
+  useFixedRepair();
   return (
     <div className="flex min-h-dvh flex-col">
       <a
