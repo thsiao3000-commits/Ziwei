@@ -217,49 +217,61 @@ test('首頁列出最近開啟的命盤，寬螢幕放在右邊', async ({ page 
   await expect(page.getByRole('heading', { level: 1, name: '小明的命盤' })).toBeVisible();
 });
 
-test('命盤頁：摺疊手機橫向（約 951×669）左右兩欄，整張命盤放得進一個畫面；窄一點或直向維持上下排', async ({ page }, testInfo) => {
+test('命盤頁：只有電腦分左右兩欄；平板與摺疊手機橫向上下排，而且整張命盤放得進一個畫面', async ({ page, browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', '這個測試自己設定視窗大小');
-  await page.setViewportSize({ width: 951, height: 669 });
-  await page.goto('./');
-  await page.getByLabel('稱呼').fill('小明');
-  await page.getByRole('radio', { name: '女' }).check({ force: true });
-  await page.getByLabel('年（西元）').fill('2000');
-  await page.getByLabel('月', { exact: true }).selectOption('8');
-  await page.getByLabel('日', { exact: true }).selectOption('16');
-  await page.getByLabel('時鐘時間').fill('04:10');
-  await page.getByRole('button', { name: '排出命盤' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: '小明的命盤' })).toBeVisible();
 
-  const board = page.getByRole('group', { name: '小明的命盤' });
-  const aside = page.getByRole('complementary', { name: '解讀與宮位詳情' });
-  const measure = async () => {
-    await page.evaluate(() => window.scrollTo(0, 0));
-    const box = (await board.boundingBox())!;
-    return { bottom: box.y + box.height, right: box.x + box.width, width: box.width };
-  };
-
-  // 橫向：解讀在命盤右邊，命盤的下緣在畫面內，也沒有小到比一般手機還小。
-  await expect(aside).toBeVisible();
-  let size = await measure();
-  expect(size.bottom).toBeLessThanOrEqual(669);
-  expect(size.width).toBeGreaterThanOrEqual(360);
-  expect((await aside.boundingBox())!.x).toBeGreaterThanOrEqual(size.right);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-
-  // 螢幕更矮（瀏覽器的網址列佔掉一部分）：命盤跟著縮，但不小於 360px。
-  await page.setViewportSize({ width: 951, height: 600 });
-  size = await measure();
-  expect(size.bottom).toBeLessThanOrEqual(600);
-  expect(size.width).toBeGreaterThanOrEqual(360);
-
-  // 電腦（1024 以上）不受高度限制影響：命盤維持原本的大小。
-  await page.setViewportSize({ width: 1024, height: 669 });
-  expect((await measure()).width).toBeGreaterThan(540);
-
-  // 899px 以下與平板直向：上下排，側欄不顯示。
-  for (const [width, height] of [[899, 700], [820, 1180], [669, 951]] as const) {
-    await page.setViewportSize({ width, height });
-    await expect(aside).toBeHidden();
-    await expect(page.locator('#reading-section')).toBeVisible();
+  async function openChart(target: Page) {
+    await target.goto('./');
+    await target.getByLabel('稱呼').fill('小明');
+    await target.getByRole('radio', { name: '女' }).check({ force: true });
+    await target.getByLabel('年（西元）').fill('2000');
+    await target.getByLabel('月', { exact: true }).selectOption('8');
+    await target.getByLabel('日', { exact: true }).selectOption('16');
+    await target.getByLabel('時鐘時間').fill('04:10');
+    await target.getByRole('button', { name: '排出命盤' }).click();
+    await expect(target.getByRole('heading', { level: 1, name: '小明的命盤' })).toBeVisible();
   }
+  const parts = (target: Page) => ({
+    board: target.getByRole('group', { name: '小明的命盤' }),
+    aside: target.getByRole('complementary', { name: '解讀與宮位詳情' }),
+    below: target.locator('#reading-section'),
+  });
+  async function measure(target: Page) {
+    await target.evaluate(() => window.scrollTo(0, 0));
+    const box = (await parts(target).board.boundingBox())!;
+    return { bottom: box.y + box.height, right: box.x + box.width, width: box.width };
+  }
+
+  // 電腦（滑鼠）：1024 以上兩欄，命盤不受高度限制；窄於 1024 上下排。
+  await page.setViewportSize({ width: 1024, height: 669 });
+  await openChart(page);
+  await expect(parts(page).aside).toBeVisible();
+  const desktop = await measure(page);
+  expect(desktop.width).toBeGreaterThan(540);
+  expect((await parts(page).aside.boundingBox())!.x).toBeGreaterThanOrEqual(desktop.right);
+  await page.setViewportSize({ width: 1023, height: 700 });
+  await expect(parts(page).aside).toBeHidden();
+  await expect(parts(page).below).toBeVisible();
+
+  // 觸控裝置：不論多寬都上下排。
+  const context = await browser.newContext({ baseURL, hasTouch: true, isMobile: true, viewport: { width: 860, height: 669 } });
+  const touch = await context.newPage();
+  await openChart(touch);
+  // [寬, 高, 命盤要不要放進一個畫面]：摺疊手機橫向（實機可用寬度約 860）、網址列佔掉高度、iPad 橫向、直向。
+  for (const [width, height, fits] of [[860, 669, true], [860, 600, true], [1180, 820, true], [1366, 1024, true], [820, 1180, false], [669, 951, false]] as const) {
+    await touch.setViewportSize({ width, height });
+    await expect(parts(touch).aside, `${width}×${height}`).toBeHidden();
+    await expect(parts(touch).below).toBeVisible();
+    const size = await measure(touch);
+    expect(size.width).toBeGreaterThanOrEqual(360);
+    if (fits) expect(size.bottom, `${width}×${height}`).toBeLessThanOrEqual(height);
+    expect(await touch.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    // 截圖前等進場動畫跑完。
+    if (process.env.SHOT_DIR) await touch.waitForTimeout(2500);
+    if (process.env.SHOT_DIR) await touch.screenshot({ path: `${process.env.SHOT_DIR}/chart-touch-${width}x${height}.png` });
+  }
+  // 一般手機橫向（高度不夠）：不縮命盤，維持撐滿寬度。
+  await touch.setViewportSize({ width: 852, height: 393 });
+  expect((await measure(touch)).width).toBeGreaterThan(700);
+  await context.close();
 });

@@ -76,6 +76,9 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
   );
 }
 
+/** 左右兩欄的條件，要和 styles/index.css 的 split: 一致：只有電腦（滑鼠或觸控板）才分兩欄。 */
+const SPLIT_QUERY = '(min-width: 64rem) and (hover: hover) and (pointer: fine)';
+
 export type PendingAsk = { message: string; extra: { label: string; text: string } };
 
 type ReadyProps = { saved: SavedChart; chart: ChartData; fresh: boolean; onRecast: () => void; pendingAsk: PendingAsk | null };
@@ -209,7 +212,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
     setTab('reading');
     void reading.send(quick.message, quick);
     // 手機：收起抽屜（保留選取），捲到解讀面板。
-    if (window.matchMedia('(max-width: 899.98px)').matches) {
+    if (!window.matchMedia(SPLIT_QUERY).matches) {
       setSheetOpen(false);
       document.getElementById('reading-section')?.scrollIntoView({ block: 'start' });
     }
@@ -245,7 +248,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
     );
 
   return (
-    <div className="grid gap-6 split:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] split:gap-6 lg:gap-10 2xl:grid-cols-[minmax(0,820px)_minmax(0,1fr)]">
+    <div className="grid gap-6 split:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] split:gap-10 2xl:grid-cols-[minmax(0,820px)_minmax(0,1fr)]">
       <section aria-labelledby="chart-title" className="min-w-0">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <h1 id="chart-title" className="text-[1.5rem] md:text-[2rem]">
@@ -328,7 +331,7 @@ function ChartView({ saved, chart, fresh, onRecast, pendingAsk }: ReadyProps) {
       </section>
 
       {/* 桌機：側欄，解讀與宮位詳情兩個分頁 */}
-      <aside aria-label="解讀與宮位詳情" className="hidden min-w-0 border-l border-line pl-6 split:block lg:pl-10">
+      <aside aria-label="解讀與宮位詳情" className="hidden min-w-0 border-l border-line pl-10 split:block">
         {palace && (
           <div role="tablist" aria-label="側欄內容" className="mb-4 flex gap-1 border-b border-line-soft">
             {(

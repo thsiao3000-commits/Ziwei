@@ -592,11 +592,12 @@
   text-decoration-style: solid;
 }
 
-/* 摺疊手機橫向（約 951×669）：螢幕寬但不高。命盤頁在這個寬度已經是左右兩欄（split:），
-   再把命盤的寬度限制在「螢幕高度扣掉上方的標題列」以內，正方形的命盤才放得進一個畫面。
+/* 平板與摺疊手機橫向（例如 iPhone Duo 內螢幕約 860×669、iPad 1180×820）：螢幕寬但不高，
+   命盤頁在行動裝置上又是上下排，命盤撐滿寬度會比螢幕高。把命盤的寬度限制在
+   「螢幕高度扣掉上方的標題列」以內，正方形的命盤才放得進一個畫面。
    11.5rem 是站名列、命盤標題與那一排連結的高度；最小 22.5rem（和一般手機上的命盤差不多大）。
-   只管 900–1023px：更寬的電腦螢幕維持原本的大小。 */
-@media (min-width: 900px) and (max-width: 1023.98px) and (orientation: landscape) {
+   只管觸控裝置，而且螢幕要夠高：一般手機橫向（高約 400px）縮了也放不進去，維持原樣。 */
+@media (pointer: coarse) and (orientation: landscape) and (min-width: 768px) and (min-height: 560px) {
   .chart-fit {
     max-width: max(22.5rem, calc(100dvh - 11.5rem));
   }
